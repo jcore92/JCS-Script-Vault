@@ -1,0 +1,136 @@
+#!/bin/bash
+source "$HOME/.local/bin/js-forge" forgefile
+header-file
+
+forgefileauthor="JCore92"
+forgefileversion="1.0"
+
+tool_to_pkg_name() {
+case "$1" in
+"nextcloud") echo "nextcloud-desktop" ;;
+*)     echo "$1" ;;
+esac
+}
+
+check_programs() {
+#ksystemlog calibre
+local missing=()
+local programs=("nextcloud" "bibletime" "goldendict" "libreoffice" "variety" "digikam" "qmmp" "vlc" "picard" "thunderbird")  # Add more here
+
+for prog in "${programs[@]}"; do
+if ! command -v "$prog" &>/dev/null; then
+echo -e " ✕ $prog is not installed" | print_red
+missing+=("$(tool_to_pkg_name "$prog")")
+#missing+=("$prog")
+else
+echo -e " ✓ $prog is installed"
+fi
+done
+
+if [ ${#missing[@]} -ne 0 ]; then
+spacer ; echo "Attempting to install package(s): '${missing[*]}'" ; printf " 🔐 " ; sudo apt update ; sudo $pkgmngr_install ${missing[*]}
+sleep-short ; spacer ; echo "Please install missing packages using this command, then restart $programname Action:"
+echo "sudo $pkgmngr_install ${missing[*]}"
+#return 1
+fi
+}
+
+check_Feishin() {
+
+
+# Define array of programs to check for installation
+programs=("Feishin")  # Replace with actual program names
+missing=()
+
+feinshin_file_exists=false
+for file in ~/Applications/*$programs*; do
+    if [[ -e "$file" ]]; then
+        feinshin_file_exists=true
+        break
+    fi
+done
+
+if $feinshin_file_exists; then
+    echo -e " ✓ $programs is installed"
+else
+    echo -e " ✕ $programs is not installed" | print_red
+    spacer ; echo "Attempting to install package(s): '${missing[*]}' in a new terminal window..." ; var="$(curl -sL https://api.github.com/repos/jeffvli/feishin/releases/latest | jq -r .assets[].browser_download_url | grep x86_64.AppImage)" ; cd ~/Downloads ; wget $var ; var2=$(basename "$var") ; AppImageLauncher ~/Downloads/$var2 > /dev/null 2>&1
+fi
+}
+
+check_flatpaks() {
+# Define a list of Flatpak packages you want to install
+FLATPAK_LIST=(
+    "com.bitwarden.desktop"
+    "org.kde.kfind"
+    "org.kde.okular"
+    "com.ulduzsoft.Birdtray"
+    "com.discordapp.Discord"
+    # Add more applications as needed here
+)
+
+spacer ; echo "Attempting to install flatpak(s): '${FLATPAK_LIST[*]}'" ; spacer
+
+# Loop through the list and install each application
+for APP in "${FLATPAK_LIST[@]}"; do
+    echo "Installing $APP..."
+    if flatpak search "$APP" > /dev/null; then
+        flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo ; flatpak install -y --noninteractive --user flathub "$APP"
+        if [ "$APP" == "org.kde.kfind" ]; then
+        kfind_flatpak_tweak
+        fi
+    else
+        echo "Package $APP not found on Flathub."
+    fi
+done
+
+#-y --noninteractive
+#spacer ; echo "Attempting to install flatpak(s): '${flatpaks[*]}' in a new terminal window..." ; x-terminal-emulator -e "bash -c 'flatpak list ; echo "" ; flatpak install -y flathub ${flatpaks[*]} ; sleep 2.5'"
+#spacer
+#echo "Flatpaks: ${flatpaks[*]}"
+#return 1
+}
+
+kfind_flatpak_tweak() {
+
+# Define the URL of the image
+image_url="https://github.com/KDE/kfind/blob/master/icons/128-apps-kfind.png?raw=true"
+
+# Define the destination file path
+destination_path="$icons_location/Kfind.png"
+
+# Download the image using wget or curl (depending on which one is available)
+if command -v wget &> /dev/null; then
+    wget -O "$destination_path" "$image_url"
+elif command -v curl &> /dev/null; then
+    curl -o "$destination_path" "$image_url"
+else
+    echo "Neither wget nor curl found, cannot download the image."
+fi
+
+# Check if the file was downloaded successfully
+if [ -f "$destination_path" ]; then
+    echo "Image downloaded to $destination_path successfully."
+    echo "Creating menu icon..."
+    echo "[Desktop Entry]
+Name=Kfind
+Comment=Find files easily
+Exec=flatpak run org.kde.kfind
+Icon=Kfind
+Terminal=false
+Type=Application
+Categories=Utility;FileTools;
+MimeType=x-scheme-handler/directory;" | tee $HOME/.local/share/applications/Kfind.desktop > /dev/null 2>&1 ; chmod +x $HOME/.local/share/applications/Kfind.desktop
+else
+    echo "Failed to download the image. Please check your internet connection or try running this again later."
+fi
+
+}
+
+# Use it
+if check_programs; then
+check_Feishin
+check_flatpaks
+else
+exit
+fi

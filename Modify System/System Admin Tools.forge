@@ -1,0 +1,186 @@
+#!/bin/bash
+source "$HOME/.local/bin/js-forge" forgefile
+header-file
+
+forgefileauthor="JCore92"
+forgefileversion="1.0"
+
+xrdp_tweaks() {
+
+decheck="$(echo "$XDG_CURRENT_DESKTOP")"
+
+if [ -f ~/.xsession ]; then
+cp ~/.xsession ~/.xsession.bak
+echo "Backup created: ~/.xsession.bak"
+else
+echo "~/.xsession does not exist. No backup needed."
+fi
+
+if [ -f ~/.xsessionrc ]; then
+cp ~/.xsessionrc ~/.xsessionrc.bak
+echo "Backup created: ~/.xsessionrc.bak"
+else
+echo "~/.xsessionrc does not exist. No backup needed."
+fi
+
+if [ "$decheck" == KDE ]; then
+echo "Exporting xRDP's setting...
+"
+echo "/usr/bin/startplasma-x11" | tee -a ~/.xsession
+fi
+
+if [ "$decheck" == "XFCE" ]; then
+echo "Exporting xfRDP's setting..."
+
+echo "/usr/bin/xfce4-session" | tee -a ~/.xsession
+fi
+
+if [ "$decheck" == "GNOME" ]; then
+echo "Exporting gRDP's setting..."
+
+echo "/usr/bin/gnome-session" | tee -a ~/.xsession
+fi
+
+if [ "$decheck" == "zorin:GNOME" ]; then
+    echo "Exporting XRDP settings for Zorin OS..."
+
+    echo "/usr/bin/gnome-session" | tee -a ~/.xsession
+
+    echo "export GNOME_SHELL_SESSION_MODE=ubuntu
+export XDG_CURRENT_DESKTOP=ubuntu:GNOME
+export XDG_CONFIG_DIRS=/etc/xdg/xdg-ubuntu:/etc/xdg" | tee -a ~/.xsessionrc
+fi
+
+if [ "$decheck" == "pop:GNOME" ]; then
+echo "Exporting popRDP's setting..."
+
+echo "export GNOME_SHELL_SESSION_MODE=pop
+export XDG_CURRENT_DESKTOP=pop:GNOME
+export GDMSESSION=pop" | tee -a ~/.xsession
+
+echo "/etc/xrdp/startpop.sh" | tee -a ~/.xsession
+
+echo "/usr/bin/gnome-session --session=pop" | tee -a ~/.xsession
+fi
+
+}
+
+tool_to_pkg_name() {
+case "$1" in
+"users-admin") echo "gnome-system-tools" ;;
+*)     echo "$1" ;;
+esac
+}
+
+check_programs() {
+#ksystemlog
+xrdp_tweak_flag="0"
+local missing=()
+local programs=("gufw" "deja-dup" "timeshift" "xrdp" "synaptic" "htop" "remmina" "users-admin")  # Add more here
+
+for prog in "${programs[@]}"; do
+if ! command -v "$prog" &>/dev/null; then
+echo -e " ✕ $prog is not installed" | print_red
+missing+=("$(tool_to_pkg_name "$prog")")
+#missing+=("$prog")
+if [ "$prog" == "xrdp" ]; then
+xrdp_tweak_flag="1"
+fi
+else
+echo -e " ✓ $prog is installed"
+fi
+done
+
+if [ ${#missing[@]} -ne 0 ]; then
+spacer ; echo "Attempting to install package(s): '${missing[*]}'" ; printf " 🔐 " ; sudo apt update ; sudo $pkgmngr_install ${missing[*]}
+
+if [ "$xrdp_tweak_flag" == "1" ]; then
+xrdp_tweaks
+fi
+
+sleep-short ; spacer ; echo "Please install missing packages using this command, then restart $programname Action:"
+echo "sudo $pkgmngr_install ${missing[*]}"
+#return 1
+fi
+}
+
+
+
+check_rustdesk() {
+#ksystemlog
+local missing=()
+local programs=("rustdesk")  # Add more here
+
+for prog in "${programs[@]}"; do
+if ! command -v "$prog" &>/dev/null; then
+echo -e " ✕ $prog is not installed" | print_red
+missing+=("$(tool_to_pkg_name "$prog")")
+#missing+=("$prog")
+else
+echo -e " ✓ $prog is installed"
+fi
+done
+
+if [ ${#missing[@]} -ne 0 ]; then
+spacer ; echo "Attempting to install package(s): '${missing[*]}'" ; var="$(curl -sL https://api.github.com/repos/rustdesk/rustdesk/releases/latest | jq -r .assets[].browser_download_url | grep x86_64.deb)" ; cd ~/Downloads ; wget $var ; var2=$(basename "$var") ; printf " 🔐 " ; sudo apt install ~/Downloads/$var2 #x-terminal-emulator -e "bash -c 'var="$(curl -sL https://api.github.com/repos/rustdesk/rustdesk/releases/latest | jq -r .assets[].browser_download_url | grep x86_64.deb)" ; cd ~/Downloads ; wget \$var ; var2=\$(basename \"\$var\") ; printf \" 🔐 \" ; sudo apt install ~/Downloads/\$var2'"
+#return 1
+fi
+}
+
+check_twingate() {
+#ksystemlog
+local missing=()
+local programs=("twingate")  # Add more here
+
+for prog in "${programs[@]}"; do
+if ! command -v "$prog" &>/dev/null; then
+echo -e " ✕ $prog is not installed" | print_red
+missing+=("$(tool_to_pkg_name "$prog")")
+#missing+=("$prog")
+else
+echo -e " ✓ $prog is installed"
+fi
+done
+
+if [ ${#missing[@]} -ne 0 ]; then
+
+printf " 🔐 " ; curl -s https://binaries.twingate.com/client/linux/install.sh | sudo bash ; sudo apt install -yq twingate
+
+fi
+}
+
+
+check_flatpaks() {
+# Define a list of Flatpak packages you want to install
+FLATPAK_LIST=(
+    "io.github.plrigaux.sysd-manager"
+    "io.github.thetumultuousunicornofdarkness.cpu-x"
+    "io.github.congard.qnvsm"
+    "org.gnome.Logs"
+    "org.qbittorrent.qBittorrent"
+    "com.github.tchx84.Flatseal"
+    # Add more applications as needed here
+)
+
+spacer ; echo "Attempting to install flatpak(s): '${FLATPAK_LIST[*]}'" ; spacer
+
+# Loop through the list and install each application
+for APP in "${FLATPAK_LIST[@]}"; do
+    echo "Installing $APP..."
+    if flatpak search "$APP" > /dev/null; then
+        flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo ; flatpak install -y --noninteractive --user flathub "$APP"
+    else
+        echo "Package $APP not found on Flathub."
+    fi
+done
+
+}
+
+# Use it
+if check_programs; then
+check_rustdesk
+check_twingate
+check_flatpaks
+else
+exit
+fi
