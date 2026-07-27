@@ -1,0 +1,63 @@
+#!/bin/bash
+
+app_name="JS-Forge"
+runtime_core_path="${JSF_RUNTIME_CORE_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/$app_name/runtime-core.lib}"
+
+source "$runtime_core_path" || {
+    echo "Fatal: failed to source JS-Forge runtime." >&2
+    exit 1
+}
+
+jsf_init_runtime_core
+
+repo_file="/etc/repo.d/default.repo"
+backup_file="${repo_file}.$(date +%Y%m%d-%H%M%S).bak"
+
+block_1='[om-rock-extra]
+name=OpenMandriva - Rock - Extra
+baseurl=https://ftp.nluug.nl/os/Linux/distr/openmandriva/rock/repository/x86_64/extra/release/
+enabled=1
+priority=99
+includepkgs=runit
+gpgcheck=0'
+
+block_2='[om-rock-main]
+name=OpenMandriva - Rock - Main
+baseurl=https://ftp.nluug.nl/os/Linux/distr/openmandriva/rock/repository/x86_64/main/release/
+enabled=1
+priority=99
+includepkgs=7zip,p7zip,tlp
+gpgcheck=0'
+
+if [ ! -f "$repo_file" ]; then
+    echo "Fatal: repo file not found: $repo_file" >&2
+    exit 1
+fi
+
+section_exists() {
+    local section="$1"
+    grep -qF "[$section]" "$repo_file"
+}
+
+append_block_if_missing() {
+    local section="$1"
+    local block="$2"
+
+    if section_exists "$section"; then
+        echo "Section [$section] already exists, skipping."
+        return 0
+    fi
+
+    printf '\n%s\n' "$block" | ${sudocmd}tee -a "$repo_file" >/dev/null
+    echo "Added [$section]."
+}
+
+${sudocmd}cp -a "$repo_file" "$backup_file"
+echo "Backup created: $backup_file"
+
+append_block_if_missing "om-rock-extra" "$block_1"
+append_block_if_missing "om-rock-main" "$block_2"
+
+echo
+echo "Done."
+echo "Updated file: $repo_file"
