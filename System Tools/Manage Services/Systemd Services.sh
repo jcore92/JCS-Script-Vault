@@ -1,4 +1,5 @@
 #!/bin/bash
+jsf_no_pause="1"
 
 app_name="JS-Forge"
 runtime_core_path="${JSF_RUNTIME_CORE_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/$app_name/runtime-core.lib}"
@@ -13,14 +14,7 @@ jsf_init_runtime_core
 jsf_require_all \
   --flatpak io.github.plrigaux.sysd-manager \
 
-# 1. Start Flatpak in a completely isolated session
 setsid flatpak run io.github.plrigaux.sysd-manager >/dev/null 2>&1 &
+disown 2>/dev/null || true
 
-# 2. Give the system a brief moment to map the process
-sleep 0.2
-
-# 3. Forcefully kill the parent script waiting on the "read" prompt
-kill -9 "$PPID"
-
-# 4. Exit this child script
-exit 0
+#exit 0

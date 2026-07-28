@@ -1,13 +1,7 @@
 #!/bin/bash
+jsf_no_pause="1"
 
-# 1. Start Flatpak in a completely isolated session
 setsid xdg-open https://crontab.guru/ >/dev/null 2>&1 &
+disown 2>/dev/null || true
 
-# 2. Give the system a brief moment to map the process
-sleep 0.2
-
-# 3. Forcefully kill the parent script waiting on the "read" prompt
-kill -9 "$PPID"
-
-# 4. Exit this child script
-exit 0
+#exit 0
