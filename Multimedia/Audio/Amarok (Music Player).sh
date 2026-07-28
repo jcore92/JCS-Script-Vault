@@ -12,9 +12,9 @@ source "$runtime_core_path" || {
 jsf_init_runtime_core
 
 jsf_require_all \
-  --flatpak com.ylsoftware.qmmp.Qmmp \
+  --flatpak org.kde.amarok \
 
-setsid flatpak run com.ylsoftware.qmmp.Qmmp >/dev/null 2>&1 &
+setsid flatpak run org.kde.amarok >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 #exit 0
