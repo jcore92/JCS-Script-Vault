@@ -16,7 +16,7 @@ case "${DISTRO_FAMILY:-$(jsf_detect_distro_family)}" in
         jsf_require_all \
           --native synaptic
 
-        setsid pkexec /usr/sbin/synaptic >/dev/null 2>&1 &
+        pkexec /usr/sbin/synaptic #>/dev/null 2>&1 &
         disown 2>/dev/null || true
         ;;
 
@@ -24,7 +24,7 @@ case "${DISTRO_FAMILY:-$(jsf_detect_distro_family)}" in
         jsf_require_all \
           --native dnfdragora
 
-        setsid pkexec dnfdragora >/dev/null 2>&1 &
+        pkexec dnfdragora #>/dev/null 2>&1 &
         disown 2>/dev/null || true
         ;;
 
@@ -32,7 +32,7 @@ case "${DISTRO_FAMILY:-$(jsf_detect_distro_family)}" in
         jsf_require_all \
           --native yast2-packager
 
-        setsid pkexec /usr/lib/YaST2/bin/sw_single_wrapper >/dev/null 2>&1 &
+        pkexec /usr/lib/YaST2/bin/sw_single_wrapper #>/dev/null 2>&1 &
         disown 2>/dev/null || true
         ;;
 
@@ -40,7 +40,7 @@ case "${DISTRO_FAMILY:-$(jsf_detect_distro_family)}" in
         jsf_require_all \
           --native octopi
 
-        setsid pkexec octopi >/dev/null 2>&1 &
+        pkexec octopi #>/dev/null 2>&1 &
         disown 2>/dev/null || true
         ;;
 
