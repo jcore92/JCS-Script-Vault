@@ -46,7 +46,7 @@ arch)
 	jsf_require_all \
 		--native octopi
 
-	pkexec octopi #>/dev/null 2>&1 &
+	octopi #pkexec octopi #>/dev/null 2>&1 &
 	disown 2>/dev/null || true
 	;;
 
