@@ -12,10 +12,10 @@ source "$runtime_core_path" || {
 jsf_init_runtime_core
 
 jsf_require_all \
-  --native clamscan freshclam clamdscan clamd	\
+  --native clamscan freshclam	\
   --flatpak io.github.linx_systems.ClamUI \
 
-setsid io.github.linx_systems.ClamUI >/dev/null 2>&1 &
+setsid flatpak run io.github.linx_systems.ClamUI >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 #exit 0

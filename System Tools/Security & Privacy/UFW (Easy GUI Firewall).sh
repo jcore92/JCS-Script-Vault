@@ -12,9 +12,9 @@ source "$runtime_core_path" || {
 jsf_init_runtime_core
 
 jsf_require_all \
-  --flatpak com.github.tchx84.Flatseal \
+  --native ufw \
 
-setsid flatpak run com.github.tchx84.Flatseal >/dev/null 2>&1 &
+setsid gufw >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 #exit 0
