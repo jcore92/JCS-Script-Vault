@@ -12,9 +12,9 @@ source "$runtime_core_path" || {
 jsf_init_runtime_core
 
 jsf_require_all \
-  --flatpak org.gnome.BreakTimer \
+  --flatpak net.nokyan.Resources \
 
-setsid flatpak run org.gnome.BreakTimer >/dev/null 2>&1 &
+setsid flatpak run net.nokyan.Resources >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 #exit 0
