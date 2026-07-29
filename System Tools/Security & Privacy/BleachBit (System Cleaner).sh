@@ -14,7 +14,11 @@ jsf_init_runtime_core
 jsf_require_all \
   --native bleachbit \
 
-setsid bleachbit >/dev/null 2>&1 &
-disown 2>/dev/null || true
+if [ "$(jsf_detect_distro_family)" = "arch" ]; then
+    xdg-open /usr/share/applications/org.bleachbit.BleachBit.desktop
+else
+    setsid bleachbit >/dev/null 2>&1 &
+    disown 2>/dev/null || true
+fi
 
 #exit 0
