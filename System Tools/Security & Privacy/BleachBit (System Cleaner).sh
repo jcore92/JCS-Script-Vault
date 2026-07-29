@@ -14,7 +14,12 @@ jsf_init_runtime_core
 jsf_require_all \
   --flatpak org.bleachbit.BleachBit \
 
-setsid flatpak run org.bleachbit.BleachBit >/dev/null 2>&1 &
+flatpak override --user org.bleachbit.BleachBit --filesystem=host
+flatpak override --user org.bleachbit.BleachBit --filesystem=host-os
+flatpak override --user org.bleachbit.BleachBit --filesystem=host-etc
+flatpak override --user org.bleachbit.BleachBit --filesystem=home
+
+setsid flatpak run org.bleachbit.BleachBit & #>/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 #exit 0

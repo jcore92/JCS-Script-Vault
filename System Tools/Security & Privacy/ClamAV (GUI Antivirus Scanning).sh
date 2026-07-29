@@ -15,6 +15,11 @@ jsf_require_all \
   --native clamscan freshclam	\
   --flatpak io.github.linx_systems.ClamUI \
 
+flatpak override --user io.github.linx_systems.ClamUI --filesystem=host
+flatpak override --user io.github.linx_systems.ClamUI --filesystem=host-os
+flatpak override --user io.github.linx_systems.ClamUI --filesystem=host-etc
+flatpak override --user io.github.linx_systems.ClamUI --filesystem=home
+
 setsid flatpak run io.github.linx_systems.ClamUI >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
