@@ -5,20 +5,21 @@ app_name="JS-Forge"
 runtime_core_path="${JSF_RUNTIME_CORE_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/$app_name/runtime-core.lib}"
 
 source "$runtime_core_path" || {
-    echo "Fatal: failed to source JS-Forge runtime: $runtime_core_path" >&2
-    exit 1
+	echo "Fatal: failed to source JS-Forge runtime: $runtime_core_path" >&2
+	exit 1
 }
 
 jsf_init_runtime_core
 
 jsf_require_all \
-  --native bleachbit \
+	--native bleachbit
 
 if [ "$(jsf_detect_distro_family)" = "arch" ]; then
-    setsid xdg-open /usr/share/applications/org.bleachbit.BleachBit.desktop >/dev/null 2>&1 &
+	setsid env PATH=/usr/bin:/usr/sbin:/bin:/sbin bleachbit >/dev/null 2>&1 &
+	disown 2>/dev/null || true
 else
-    setsid bleachbit >/dev/null 2>&1 &
-    disown 2>/dev/null || true
+	setsid bleachbit >/dev/null 2>&1 &
+	disown 2>/dev/null || true
 fi
 
 #exit 0
