@@ -11,53 +11,34 @@ source "$runtime_core_path" || {
 
 appimageinstall() {
 
-	appimage_dir="${HOME}/AppImages"
-
-	existing_appimage="$(
-		find "$appimage_dir" -maxdepth 1 -type f \
-			\( -iname 'bleachbit.appimage' -o -iname 'bleachbit*appimage' \) |
+	bleachbit_appimage_url="$(
+		curl -fsSL https://api.github.com/repos/bleachbit/bleachbit/releases/latest |
+			jq -r '.assets[]?.browser_download_url // empty' |
+			grep -i 'appimage' |
+			grep -i 'x86_64' |
 			head -n 1
 	)"
 
-	appimage_dir="${HOME}/AppImages"
-	download_dir="${HOME}/Downloads"
-	mkdir -p "$appimage_dir" "$download_dir"
-
-	existing_appimage="$(
-		find "$appimage_dir" -maxdepth 1 -type f \
-			\( -iname 'bleachbit.appimage' -o -iname 'bleachbit*appimage' \) |
-			head -n 1
-	)"
-
-	if [ -n "$existing_appimage" ] && [ -f "$existing_appimage" ]; then
-		appimage_path="$existing_appimage"
-	else
-		bleachbit_appimage_url="$(
-			curl -fsSL https://api.github.com/repos/bleachbit/bleachbit/releases/latest |
-				jq -r '.assets[] | select(.name | test("BleachBit-.*-x86_64\\.AppImage$")) | .browser_download_url' |
-				head -n 1
-		)"
-
-		download_path="$download_dir/$(basename "$bleachbit_appimage_url")"
-		curl -fL "$bleachbit_appimage_url" -o "$download_path"
-		chmod +x "$download_path"
-
-		flatpak run it.mijorus.gearlever --integrate "$download_path"
-
-		appimage_path="$(
-			find "$appimage_dir" -maxdepth 1 -type f \
-				\( -iname 'bleachbit.appimage' -o -iname 'bleachbit*appimage' \) |
-				head -n 1
-		)"
+	if [ -z "$bleachbit_appimage_url" ]; then
+		echo "Failed to locate BleachBit AppImage URL from GitHub releases."
+		exit 1
 	fi
 
-	[ -n "$appimage_path" ] || {
-		echo "BleachBit AppImage could not be located after Gear Lever integration."
+	download_path="${HOME}/Downloads/$(basename "$bleachbit_appimage_url")"
+
+	curl -fL "$bleachbit_appimage_url" -o "$download_path" || {
+		echo "Failed to download BleachBit AppImage."
 		exit 1
 	}
 
-	setsid "$appimage_path" >/dev/null 2>&1 &
-	disown 2>/dev/null || true
+	chmod +x "$download_path"
+
+	[ -f "$download_path" ] || {
+		echo "Downloaded AppImage file not found."
+		exit 1
+	}
+
+	flatpak run it.mijorus.gearlever --integrate "$download_path"
 
 }
 
