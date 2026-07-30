@@ -12,10 +12,12 @@ source "$runtime_core_path" || {
 appimageinstall() {
 
 	get_bleachbit_url() {
-		curl -fsSL https://api.github.com/repos/bleachbit/bleachbit/releases/latest |
-			jq -r '.assets[]?.browser_download_url // empty' |
-			grep -i 'appimage' |
-			grep -i 'x86_64' |
+		curl -fsSL https://api.github.com/repos/bleachbit/bleachbit/releases |
+			jq -r '
+      .[] 
+      | .assets[]?.browser_download_url
+      | select(test("(?i)appimage") and test("(?i)x86_64"))
+    ' |
 			head -n 1
 	}
 
@@ -44,7 +46,7 @@ appimageinstall() {
 		bleachbit_appimage_url="$(get_bleachbit_url || true)"
 
 		if [ -z "${bleachbit_appimage_url:-}" ]; then
-			echo "Failed to locate BleachBit AppImage URL from GitHub releases."
+			echo "Failed to locate any BleachBit x86_64 AppImage in GitHub releases."
 			exit 1
 		fi
 
