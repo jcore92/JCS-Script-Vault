@@ -119,6 +119,15 @@ if [ "$(jsf_detect_distro_family)" = "arch" ]; then
 	ensure_python_modules
 	appimageinstall
 
+elif [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
+
+	jsf_require_all \
+		--native bleachbit
+	setsid bleachbit >/dev/null 2>&1 &
+	disown 2>/dev/null || true
+	echo "opening BleachBit is currently not possible on this OS. Please open it from your OS menu."
+	entertocontinue
+
 else
 
 	jsf_require_all \
