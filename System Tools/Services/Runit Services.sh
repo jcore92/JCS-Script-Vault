@@ -11,7 +11,7 @@ source "$runtime_core_path" || {
 
 set -euo pipefail
 
-#PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 
 USE_SUDO=""
 RUNIT_INSTALLED="no"
