@@ -11,34 +11,73 @@ source "$runtime_core_path" || {
 
 appimageinstall() {
 
-	bleachbit_appimage_url="$(
+	get_bleachbit_url() {
 		curl -fsSL https://api.github.com/repos/bleachbit/bleachbit/releases/latest |
 			jq -r '.assets[]?.browser_download_url // empty' |
 			grep -i 'appimage' |
 			grep -i 'x86_64' |
 			head -n 1
+	}
+
+	#!/usr/bin/env bash
+	set -euo pipefail
+
+	appimage_dir="${HOME}/AppImages"
+	download_dir="${HOME}/Downloads"
+
+	mkdir -p "$appimage_dir" "$download_dir"
+
+	echo "Checking for existing BleachBit AppImage managed by Gear Lever..."
+
+	existing_appimage="$(
+		find "$appimage_dir" -maxdepth 1 -type f \
+			\( -iname 'bleachbit.appimage' -o -iname 'bleachbit*appimage' \) |
+			head -n 1
 	)"
 
-	if [ -z "$bleachbit_appimage_url" ]; then
-		echo "Failed to locate BleachBit AppImage URL from GitHub releases."
+	if [ -n "${existing_appimage:-}" ] && [ -f "$existing_appimage" ]; then
+		echo "Found existing BleachBit AppImage: $existing_appimage"
+		appimage_path="$existing_appimage"
+	else
+		echo "No existing managed BleachBit AppImage, downloading latest..."
+
+		bleachbit_appimage_url="$(get_bleachbit_url || true)"
+
+		if [ -z "${bleachbit_appimage_url:-}" ]; then
+			echo "Failed to locate BleachBit AppImage URL from GitHub releases."
+			exit 1
+		fi
+
+		echo "Using URL: $bleachbit_appimage_url"
+
+		download_path="$download_dir/$(basename "$bleachbit_appimage_url")"
+
+		curl -fL "$bleachbit_appimage_url" -o "$download_path" || {
+			echo "Failed to download BleachBit AppImage."
+			exit 1
+		}
+
+		chmod +x "$download_path"
+
+		echo "Integrating with Gear Lever..."
+		flatpak run it.mijorus.gearlever --integrate "$download_path"
+
+		echo "Locating Gear-Lever-managed BleachBit in $appimage_dir..."
+		appimage_path="$(
+			find "$appimage_dir" -maxdepth 1 -type f \
+				\( -iname 'bleachbit.appimage' -o -iname 'bleachbit*appimage' \) |
+				head -n 1
+		)"
+	fi
+
+	if [ -z "${appimage_path:-}" ] || [ ! -f "$appimage_path" ]; then
+		echo "BleachBit AppImage could not be located after Gear Lever integration."
 		exit 1
 	fi
 
-	download_path="${HOME}/Downloads/$(basename "$bleachbit_appimage_url")"
-
-	curl -fL "$bleachbit_appimage_url" -o "$download_path" || {
-		echo "Failed to download BleachBit AppImage."
-		exit 1
-	}
-
-	chmod +x "$download_path"
-
-	[ -f "$download_path" ] || {
-		echo "Downloaded AppImage file not found."
-		exit 1
-	}
-
-	flatpak run it.mijorus.gearlever --integrate "$download_path"
+	echo "Launching BleachBit: $appimage_path"
+	setsid "$appimage_path" >/dev/null 2>&1 &
+	disown 2>/dev/null || true
 
 }
 
