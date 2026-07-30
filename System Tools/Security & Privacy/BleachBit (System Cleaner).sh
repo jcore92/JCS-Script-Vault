@@ -85,16 +85,17 @@ appimageinstall() {
 
 jsf_init_runtime_core
 
-jsf_require_all \
-	--native bleachbit
-
 if [ "$(jsf_detect_distro_family)" = "arch" ]; then
 
 	appimageinstall
 
 else
+
+	jsf_require_all \
+	--native bleachbit
 	setsid bleachbit >/dev/null 2>&1 &
 	disown 2>/dev/null || true
+	
 fi
 
 #exit 0
