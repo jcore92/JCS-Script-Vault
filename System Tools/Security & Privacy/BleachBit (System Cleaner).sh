@@ -9,6 +9,35 @@ source "$runtime_core_path" || {
 	exit 1
 }
 
+ensure_python_modules() {
+    local missing_python_pkgs=()
+
+    need_python_module() {
+        local modulename="$1"
+        local pkgname="$2"
+
+        if python3 -c "import ${modulename}" >/dev/null 2>&1; then
+            echo "Python module '${modulename}' already present"
+        else
+            echo "Python module '${modulename}' missing -> queueing '${pkgname}'"
+            missing_python_pkgs+=("$pkgname")
+        fi
+    }
+
+    need_python_module chardet  python-chardet
+    need_python_module psutil   python-psutil
+    need_python_module requests python-requests
+    need_python_module urllib3  python-urllib3
+
+    if ((${#missing_python_pkgs[@]})); then
+        echo "Installing required Python packages: ${missing_python_pkgs[*]}"
+        jsf_require_all \
+            --native "${missing_python_pkgs[@]}"
+    else
+        echo "All required Python modules are already installed."
+    fi
+}
+
 appimageinstall() {
 
 	get_bleachbit_url() {
@@ -87,9 +116,7 @@ jsf_init_runtime_core
 
 if [ "$(jsf_detect_distro_family)" = "arch" ]; then
 
-	jsf_require_all \
-		--native python-chardet python-psutil python-requests python-urllib3
-
+	ensure_python_modules
 	appimageinstall
 
 else
