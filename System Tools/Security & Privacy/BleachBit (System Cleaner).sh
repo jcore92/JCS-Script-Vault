@@ -87,15 +87,18 @@ jsf_init_runtime_core
 
 if [ "$(jsf_detect_distro_family)" = "arch" ]; then
 
+	jsf_require_all \
+		--native python-chardet python-psutil python-requests python-urllib3
+
 	appimageinstall
 
 else
 
 	jsf_require_all \
-	--native bleachbit
+		--native bleachbit
 	setsid bleachbit >/dev/null 2>&1 &
 	disown 2>/dev/null || true
-	
+
 fi
 
 #exit 0
