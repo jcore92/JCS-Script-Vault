@@ -19,7 +19,7 @@ ensure_clamd_example_commented() {
 
     if grep -Eq '^[[:space:]]*Example[[:space:]]*$' "$conf"; then
         echo "Commenting out uncommented 'Example' line in $conf"
-        sed -i 's/^[[:space:]]*Example[[:space:]]*$/#Example/' "$conf"
+        sudo sed -i 's/^[[:space:]]*Example[[:space:]]*$/#Example/' "$conf"
     else
         echo "'Example' is already commented out or not present in $conf"
     fi
