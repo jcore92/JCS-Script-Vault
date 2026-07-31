@@ -54,7 +54,7 @@ jsf_require_all \
   --native clamscan freshclam	\
   --flatpak io.github.linx_systems.ClamUI \
 
-ensure_clamd_example_commented
+ensure_clamav_example_commented
 
 flatpak override --user io.github.linx_systems.ClamUI --filesystem=host
 flatpak override --user io.github.linx_systems.ClamUI --filesystem=host-os
