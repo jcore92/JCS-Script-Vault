@@ -10,18 +10,26 @@ source "$runtime_core_path" || {
 }
 
 ensure_clamd_example_commented() {
-    local conf="/etc/clamd.conf"
+    local conf=""
 
-    [[ -f "$conf" ]] || {
-        echo "clamd.conf not found: $conf"
+    for candidate in /etc/clamav/clamd.conf /etc/clamd.conf; do
+        [[ -f "$candidate" ]] && conf="$candidate" && break
+    done
+
+    [[ -n "$conf" ]] || {
+        echo "clamd.conf not found"
         return 1
     }
 
-    if grep -Eq '^[[:space:]]*Example[[:space:]]*$' "$conf"; then
-        echo "Commenting out uncommented 'Example' line in $conf"
-        sudo sed -i 's/^[[:space:]]*Example[[:space:]]*$/#Example/' "$conf"
+    if grep -Eq '^[[:space:]]*#?[[:space:]]*Example[[:space:]]*\r?$' "$conf"; then
+        if grep -Eq '^[[:space:]]*#[[:space:]]*Example[[:space:]]*\r?$' "$conf"; then
+            echo "'Example' already commented in $conf"
+        else
+            echo "Commenting out 'Example' in $conf"
+            sudo sed -i.bak '/^[[:space:]]*Example[[:space:]]*\r\?$/ s/^[[:space:]]*/#/' "$conf"
+        fi
     else
-        echo "'Example' is already commented out or not present in $conf"
+        echo "No standalone 'Example' line found in $conf"
     fi
 }
 
