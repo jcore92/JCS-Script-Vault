@@ -9,11 +9,29 @@ source "$runtime_core_path" || {
     exit 1
 }
 
+ensure_clamd_example_commented() {
+    local conf="/etc/clamav/clamd.conf"
+
+    [[ -f "$conf" ]] || {
+        echo "clamd.conf not found: $conf"
+        return 1
+    }
+
+    if grep -Eq '^[[:space:]]*Example[[:space:]]*$' "$conf"; then
+        echo "Commenting out uncommented 'Example' line in $conf"
+        sed -i 's/^[[:space:]]*Example[[:space:]]*$/#Example/' "$conf"
+    else
+        echo "'Example' is already commented out or not present in $conf"
+    fi
+}
+
 jsf_init_runtime_core
 
 jsf_require_all \
   --native clamscan freshclam	\
   --flatpak io.github.linx_systems.ClamUI \
+
+ensure_clamd_example_commented
 
 flatpak override --user io.github.linx_systems.ClamUI --filesystem=host
 flatpak override --user io.github.linx_systems.ClamUI --filesystem=host-os
