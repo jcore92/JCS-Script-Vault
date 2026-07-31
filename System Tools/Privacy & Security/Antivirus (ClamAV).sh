@@ -12,25 +12,41 @@ source "$runtime_core_path" || {
 ensure_clamd_example_commented() {
     local conf=""
 
-    for candidate in /etc/clamav/clamd.conf /etc/clamd.conf; do
-        [[ -f "$candidate" ]] && conf="$candidate" && break
+    # 1. Find clamd.conf in common locations
+    for candidate in \
+        /etc/clamav/clamd.conf \
+        /etc/clamd.conf \
+        /usr/local/etc/clamd.conf
+    do
+        if [[ -f "$candidate" ]]; then
+            conf="$candidate"
+            break
+        fi
     done
 
-    [[ -n "$conf" ]] || {
-        echo "clamd.conf not found"
+    if [[ -z "$conf" ]]; then
+        echo "clamd.conf not found in known locations"
         return 1
-    }
-
-    if grep -Eq '^[[:space:]]*#?[[:space:]]*Example[[:space:]]*\r?$' "$conf"; then
-        if grep -Eq '^[[:space:]]*#[[:space:]]*Example[[:space:]]*\r?$' "$conf"; then
-            echo "'Example' already commented in $conf"
-        else
-            echo "Commenting out 'Example' in $conf"
-            sudo sed -i.bak '/^[[:space:]]*Example[[:space:]]*\r\?$/ s/^[[:space:]]*/#/' "$conf"
-        fi
-    else
-        echo "No standalone 'Example' line found in $conf"
     fi
+
+    echo "Using clamd.conf at: $conf"
+
+    # 2. Show any lines containing 'Example'
+    echo "Lines containing 'Example' before edit:"
+    grep -n 'Example' "$conf" || echo "(none)"
+
+    # 3. Comment out a bare 'Example' line if present
+    #    - match start of line, optional spaces/tabs, 'Example', optional spaces, end of line
+    if grep -Eq $'^[ \t]*Example[ \t]*$' "$conf"; then
+        echo "Commenting out bare 'Example' line in $conf"
+        sudo sed -i.bak $'/^[ \t]*Example[ \t]*$/s/^[ \t]*/# /' "$conf"
+    else
+        echo "No bare 'Example' line found to comment in $conf"
+    fi
+
+    # 4. Show result
+    echo "Lines containing 'Example' after edit:"
+    grep -n 'Example' "$conf" || echo "(none)"
 }
 
 jsf_init_runtime_core
