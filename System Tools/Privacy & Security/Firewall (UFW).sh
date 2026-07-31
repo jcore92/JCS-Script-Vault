@@ -11,6 +11,8 @@ source "$runtime_core_path" || {
 
 jsf_init_runtime_core
 
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 jsf_require_all \
   --native ufw gufw \
 
