@@ -9,44 +9,43 @@ source "$runtime_core_path" || {
     exit 1
 }
 
-ensure_clamd_example_commented() {
-    local conf=""
+comment_example_if_present() {
+    local conf="$1"
 
-    # 1. Find clamd.conf in common locations
-    for candidate in \
-        /etc/clamav/clamd.conf \
-        /etc/clamd.conf \
-        /usr/local/etc/clamd.conf
-    do
-        if [[ -f "$candidate" ]]; then
-            conf="$candidate"
-            break
-        fi
-    done
-
-    if [[ -z "$conf" ]]; then
-        echo "clamd.conf not found in known locations"
+    [[ -f "$conf" ]] || {
+        echo "Config not found: $conf"
         return 1
-    fi
+    }
 
-    echo "Using clamd.conf at: $conf"
+    echo "Checking $conf for bare 'Example' line"
 
-    # 2. Show any lines containing 'Example'
-    echo "Lines containing 'Example' before edit:"
-    grep -n 'Example' "$conf" || echo "(none)"
+    # Show current lines with 'Example'
+    grep -n 'Example' "$conf" || echo "(no Example lines)"
 
-    # 3. Comment out a bare 'Example' line if present
-    #    - match start of line, optional spaces/tabs, 'Example', optional spaces, end of line
+    # Match a line that is just 'Example' (with optional spaces/tabs)
     if grep -Eq $'^[ \t]*Example[ \t]*$' "$conf"; then
-        echo "Commenting out bare 'Example' line in $conf"
+        echo "Commenting out 'Example' in $conf"
         sudo sed -i.bak $'/^[ \t]*Example[ \t]*$/s/^[ \t]*/# /' "$conf"
     else
-        echo "No bare 'Example' line found to comment in $conf"
+        echo "No bare 'Example' line to comment in $conf"
     fi
 
-    # 4. Show result
-    echo "Lines containing 'Example' after edit:"
-    grep -n 'Example' "$conf" || echo "(none)"
+    echo "After edit:"
+    grep -n 'Example' "$conf" || echo "(no Example lines)"
+}
+
+ensure_clamav_example_commented() {
+    # Freshclam: most important
+    comment_example_if_present "/etc/freshclam.conf"
+
+    # clamd.conf: still good to fix if present
+    for candidate in \
+        "/etc/clamav/clamd.conf" \
+        "/etc/clamd.conf" \
+        "/usr/local/etc/clamd.conf"
+    do
+        [[ -f "$candidate" ]] && comment_example_if_present "$candidate"
+    done
 }
 
 jsf_init_runtime_core
