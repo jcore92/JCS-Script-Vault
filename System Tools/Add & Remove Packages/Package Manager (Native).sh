@@ -11,6 +11,8 @@ source "$runtime_core_path" || {
 
 jsf_init_runtime_core
 
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
 case "${DISTRO_FAMILY:-$(jsf_detect_distro_family)}" in
 debian)
 	jsf_require_all \
