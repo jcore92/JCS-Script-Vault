@@ -10,7 +10,7 @@ source "$runtime_core_path" || {
 }
 
 ensure_clamd_example_commented() {
-    local conf="/etc/clamav/clamd.conf"
+    local conf="/etc/clamd.conf"
 
     [[ -f "$conf" ]] || {
         echo "clamd.conf not found: $conf"
