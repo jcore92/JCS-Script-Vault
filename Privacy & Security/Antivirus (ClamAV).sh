@@ -59,20 +59,20 @@ jsf_detect_desktop_environment() {
 }
 
 jsf_patch_clamui_desktop_categories() {
-	local run_only_if_patched="0"
+	run_only_if_patching="0"
 	local desktop="$HOME/.local/share/flatpak/exports/share/applications/io.github.linx_systems.ClamUI.desktop"
 	local mandriva_cat="X-MandrivaLinux-System-Configuration"
 
 	if [ ! -f "$desktop" ]; then
-		echo "Gear Lever desktop file not found at $desktop"
+		echo "ClamUI desktop file not found at $desktop"
 		return 0
 	fi
 
 	if grep -q "$mandriva_cat" "$desktop"; then
-		echo "Mandriva category already present in Gear Lever desktop file"
+		echo "Mandriva category already present in ClamUI desktop file"
 	else
-		echo "Patching Gear Lever desktop file"
-		local run_only_if_patched="1"
+		echo "Patching ClamUI desktop file"
+		run_only_if_patching="1"
 
 		if grep -q '^Categories=' "$desktop"; then
 			sed -i.bak \
@@ -109,7 +109,7 @@ if [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
 	case "$(jsf_detect_desktop_environment)" in
 	xfce)
 		jsf_patch_clamui_desktop_categories
-		if [ "run_only_if_patched" == "1" ]; then
+		if [ "$run_only_if_patching" == "1" ]; then
 			jsf_refresh_xfce_menu_cache
 		fi
 		;;
