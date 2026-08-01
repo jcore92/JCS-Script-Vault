@@ -125,7 +125,7 @@ elif [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
 		--native bleachbit
 	setsid bleachbit >/dev/null 2>&1 &
 	disown 2>/dev/null || true
-	echo "opening BleachBit is currently not possible on this OS. Please open it from your OS menu."
+	echo "BleachBit has been successfully installed."
 	entertocontinue
 
 else
