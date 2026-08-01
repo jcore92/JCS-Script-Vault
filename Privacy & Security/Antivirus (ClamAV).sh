@@ -48,6 +48,54 @@ ensure_clamav_example_commented() {
     done
 }
 
+jsf_detect_desktop_environment() {
+    local de="${XDG_CURRENT_DESKTOP:-}"
+
+    if [ -z "$de" ]; then
+        de="$(echo "$XDG_DATA_DIRS" | sed 's/.*\(xfce\|kde\|gnome\).*/\1/' 2>/dev/null)"
+    fi
+
+    de="$(printf '%s' "$de" | tr '[:upper:]' '[:lower:]')"
+    printf '%s\n' "$de"
+}
+
+jsf_patch_clamui_desktop_categories() {
+    local desktop="$HOME/.local/share/flatpak/exports/share/applications/io.github.linx_systems.ClamUI.desktop"
+    local mandriva_cat="X-MandrivaLinux-System-Configuration"
+
+    if [ ! -f "$desktop" ]; then
+        echo "Gear Lever desktop file not found at $desktop"
+        return 0
+    fi
+
+    if grep -q "$mandriva_cat" "$desktop"; then
+        echo "Mandriva category already present in Gear Lever desktop file"
+    else
+        echo "Patching Gear Lever desktop file"
+
+        if grep -q '^Categories=' "$desktop"; then
+            sed -i.bak \
+                -e "/^Categories=/{
+                    s/;[[:space:]]*$//;
+                    s/$/;${mandriva_cat};/
+                }" \
+                "$desktop"
+        else
+            sed -i.bak \
+                -e "/^\[Desktop Entry\]/a Categories=${mandriva_cat};" \
+                "$desktop"
+        fi
+    fi
+}
+
+jsf_refresh_xfce_menu_cache() {
+    pkill xfce4-appfinder 2>/dev/null || true
+    rm -rf "$HOME/.cache/xfce4/appfinder"
+    rm -rf "$HOME/.cache/menu-cache"
+    update-desktop-database "$HOME/.local/share/applications/" 2>/dev/null || true
+    xfce4-panel -r 2>/dev/null || true
+}
+
 jsf_init_runtime_core
 
 jsf_require_all \
@@ -55,6 +103,18 @@ jsf_require_all \
   --flatpak io.github.linx_systems.ClamUI \
 
 ensure_clamav_example_commented
+
+if [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
+    case "$(jsf_detect_desktop_environment)" in
+        xfce)
+            jsf_patch_clamui_desktop_categories
+            jsf_refresh_xfce_menu_cache
+            ;;
+        kde)
+            # add KDE-specific refresh logic later if needed
+            ;;
+    esac
+fi
 
 flatpak override --user io.github.linx_systems.ClamUI --filesystem=host
 flatpak override --user io.github.linx_systems.ClamUI --filesystem=host-os
