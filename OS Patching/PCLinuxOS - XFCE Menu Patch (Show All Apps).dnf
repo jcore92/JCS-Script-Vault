@@ -56,25 +56,56 @@ jsf_patch_gearlever_desktop_categories() {
 	fi
 }
 
+jsf_patch_clamui_desktop_categories() {
+	run_only_if_patching="0"
+	local desktop="$HOME/.local/share/flatpak/exports/share/applications/io.github.linx_systems.ClamUI.desktop"
+	local mandriva_cat="X-MandrivaLinux-System-Configuration"
+
+	if [ ! -f "$desktop" ]; then
+		echo "ClamUI desktop file not found at $desktop"
+		return 0
+	fi
+
+	if grep -q "$mandriva_cat" "$desktop"; then
+		echo "Mandriva category already present in ClamUI desktop file"
+	else
+		echo "Patching ClamUI desktop file"
+		run_only_if_patching="1"
+
+		if grep -q '^Categories=' "$desktop"; then
+			sed -i.bak \
+				-e "/^Categories=/{
+                    s/;[[:space:]]*$//;
+                    s/$/;${mandriva_cat};/
+                }" \
+				"$desktop"
+		else
+			sed -i.bak \
+				-e "/^\[Desktop Entry\]/a Categories=${mandriva_cat};" \
+				"$desktop"
+		fi
+	fi
+}
+
 jsf_patch_xfce_menu_show_all_other() {
-    local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
-    local menu_dir="${config_home}/menus"
-    local user_menu="${menu_dir}/xfce-applications.menu"
-    local system_menu="/etc/xdg/menus/xfce-applications.menu"
+	local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+	local menu_dir="${config_home}/menus"
+	local user_menu="${menu_dir}/xfce-applications.menu"
+	local system_menu="/etc/xdg/menus/xfce-applications.menu"
 	run_only_if_patching="0"
 
-    mkdir -p "$menu_dir"
+	mkdir -p "$menu_dir"
 
-    if [ ! -f "$user_menu" ]; then
-        cp "$system_menu" "$user_menu" || return 1
-    fi
+	if [ ! -f "$user_menu" ]; then
+		cp "$system_menu" "$user_menu" || return 1
+	fi
 
-    if grep -q '<Name>Other</Name>' "$user_menu"; then
-        echo "Other menu already defined in $user_menu"
-    else
+	if grep -q '<Name>Other</Name>' "$user_menu"; then
+		echo "Other menu already defined in $user_menu"
+	else
 		run_only_if_patching="1"
 		echo "Applying override in $user_menu"
-        awk '
+		awk '
             /<MergeFile>applications-kmenuedit.menu<\/MergeFile>/ && !done {
                 print "  <Menu>"
                 print "    <Name>Other</Name>"
@@ -87,17 +118,17 @@ jsf_patch_xfce_menu_show_all_other() {
                 done=1
             }
             { print }
-        ' "$user_menu" > "${user_menu}.tmp" && mv "${user_menu}.tmp" "$user_menu"
+        ' "$user_menu" >"${user_menu}.tmp" && mv "${user_menu}.tmp" "$user_menu"
 		echo "Operation complete"
-    fi
+	fi
 }
 
 jsf_refresh_xfce_menu_cache() {
-    pkill xfce4-appfinder 2>/dev/null || true
-    rm -rf "$HOME/.cache/xfce4/appfinder"
-    rm -rf "$HOME/.cache/menu-cache"
-    update-desktop-database "$HOME/.local/share/applications/" 2>/dev/null || true
-    xfce4-panel -r 2>/dev/null || true
+	pkill xfce4-appfinder 2>/dev/null || true
+	rm -rf "$HOME/.cache/xfce4/appfinder"
+	rm -rf "$HOME/.cache/menu-cache"
+	update-desktop-database "$HOME/.local/share/applications/" 2>/dev/null || true
+	xfce4-panel -r 2>/dev/null || true
 }
 
 if [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
@@ -108,10 +139,15 @@ if [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
 			jsf_refresh_xfce_menu_cache
 		fi
 
+		jsf_patch_clamui_desktop_categories
+		if [ "$run_only_if_patching" == "1" ]; then
+			jsf_refresh_xfce_menu_cache
+		fi
+
 		jsf_patch_xfce_menu_show_all_other
-			if [ "$run_only_if_patching" == "1" ]; then
-            jsf_refresh_xfce_menu_cache
-			fi
+		if [ "$run_only_if_patching" == "1" ]; then
+			jsf_refresh_xfce_menu_cache
+		fi
 		;;
 	kde)
 		# add KDE-specific refresh logic later if needed
