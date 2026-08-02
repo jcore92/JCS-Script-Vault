@@ -42,6 +42,7 @@ jsf_patch_xfce_menu_show_all_other() {
         echo "Other menu already defined in $user_menu"
     else
 		run_only_if_patching="1"
+		echo "Applying override in $user_menu"
         awk '
             /<MergeFile>applications-kmenuedit.menu<\/MergeFile>/ && !done {
                 print "  <Menu>"
@@ -56,6 +57,7 @@ jsf_patch_xfce_menu_show_all_other() {
             }
             { print }
         ' "$user_menu" > "${user_menu}.tmp" && mv "${user_menu}.tmp" "$user_menu"
+		echo "Operation complete"
     fi
 }
 
