@@ -9,131 +9,95 @@ source "$runtime_core_path" || {
 	exit 1
 }
 
-ensure_python_modules() {
-    local missing_python_pkgs=()
+set -u
 
-    need_python_module() {
-        local modulename="$1"
-        local pkgname="$2"
+choose_bleachbit_target() {
+    local choice
 
-        if python3 -c "import ${modulename}" >/dev/null 2>&1; then
-            echo "Python module '${modulename}' already present"
+    if command -v zenity >/dev/null 2>&1; then
+        choice=$(zenity --list \
+            --title="BleachBit launch mode" \
+            --text="How do you want to open BleachBit?" \
+            --radiolist \
+            --column="Pick" --column="Mode" \
+            TRUE "User BleachBit" \
+            FALSE "Root BleachBit" \
+            FALSE "Cancel" \
+            --width=420 --height=260) || return 1
+    elif command -v xmessage >/dev/null 2>&1; then
+        if xmessage -center -buttons "User:0,Root:1,Cancel:2" "Open user BleachBit or root BleachBit?"; then
+            choice="User BleachBit"
         else
-            echo "Python module '${modulename}' missing -> queueing '${pkgname}'"
-            missing_python_pkgs+=("$pkgname")
+            choice="Cancel"
         fi
-    }
-
-    need_python_module chardet  python-chardet
-    need_python_module psutil   python-psutil
-    need_python_module requests python-requests
-    need_python_module urllib3  python-urllib3
-
-    if ((${#missing_python_pkgs[@]})); then
-        echo "Installing required Python packages: ${missing_python_pkgs[*]}"
-        jsf_require_all \
-            --native "${missing_python_pkgs[@]}"
     else
-        echo "All required Python modules are already installed."
+        printf 'Choose BleachBit mode:\n1) User\n2) Root\n3) Cancel\n> '
+        read -r choice_num
+        case "$choice_num" in
+            1) choice="User BleachBit" ;;
+            2) choice="Root BleachBit" ;;
+            *) choice="Cancel" ;;
+        esac
     fi
+
+    case "$choice" in
+        "User BleachBit") printf '%s\n' "user" ;;
+        "Root BleachBit") printf '%s\n' "root" ;;
+        *) return 1 ;;
+    esac
 }
 
-appimageinstall() {
+launch_bleachbit_user() {
+    local user_name="${SUDO_USER:-${USER:-$(id -un)}}"
+    local user_cmd
 
-	get_bleachbit_url() {
-		curl -fsSL https://api.github.com/repos/bleachbit/bleachbit/releases |
-			jq -r '
-      .[] 
-      | .assets[]?.browser_download_url
-      | select(test("(?i)appimage") and test("(?i)x86_64"))
-    ' |
-			head -n 1
-	}
+    user_cmd="$(command -v bleachbit 2>/dev/null || true)"
+    [ -n "$user_cmd" ] || user_cmd="/usr/bin/bleachbit"
 
-	#!/usr/bin/env bash
-	set -euo pipefail
+    exec pkexec --user "$user_name" "$user_cmd"
+}
 
-	appimage_dir="${HOME}/AppImages"
-	download_dir="${HOME}/Downloads"
+launch_bleachbit_root() {
+    local root_cmd
 
-	mkdir -p "$appimage_dir" "$download_dir"
+    root_cmd="$(command -v bleachbit-root 2>/dev/null || true)"
+    if [ -z "$root_cmd" ]; then
+        root_cmd="$(command -v bleachbit 2>/dev/null || true)"
+    fi
+    [ -n "$root_cmd" ] || root_cmd="/usr/bin/bleachbit"
 
-	echo "Checking for existing BleachBit AppImage managed by Gear Lever..."
+    exec pkexec "$root_cmd"
+}
 
-	existing_appimage="$(
-		find "$appimage_dir" -maxdepth 1 -type f \
-			\( -iname 'bleachbit.appimage' -o -iname 'bleachbit*appimage' \) |
-			head -n 1
-	)"
+main() {
+    local mode
+    mode="$(choose_bleachbit_target)" || exit 0
 
-	if [ -n "${existing_appimage:-}" ] && [ -f "$existing_appimage" ]; then
-		echo "Found existing BleachBit AppImage: $existing_appimage"
-		appimage_path="$existing_appimage"
-	else
-		echo "No existing managed BleachBit AppImage, downloading latest..."
-
-		bleachbit_appimage_url="$(get_bleachbit_url || true)"
-
-		if [ -z "${bleachbit_appimage_url:-}" ]; then
-			echo "Failed to locate any BleachBit x86_64 AppImage in GitHub releases."
-			exit 1
-		fi
-
-		echo "Using URL: $bleachbit_appimage_url"
-
-		download_path="$download_dir/$(basename "$bleachbit_appimage_url")"
-
-		curl -fL "$bleachbit_appimage_url" -o "$download_path" || {
-			echo "Failed to download BleachBit AppImage."
-			exit 1
-		}
-
-		chmod +x "$download_path"
-
-		echo "Integrating with Gear Lever..."
-		flatpak run it.mijorus.gearlever --integrate "$download_path"
-
-		echo "Locating Gear-Lever-managed BleachBit in $appimage_dir..."
-		appimage_path="$(
-			find "$appimage_dir" -maxdepth 1 -type f \
-				\( -iname 'bleachbit.appimage' -o -iname 'bleachbit*appimage' \) |
-				head -n 1
-		)"
-	fi
-
-	if [ -z "${appimage_path:-}" ] || [ ! -f "$appimage_path" ]; then
-		echo "BleachBit AppImage could not be located after Gear Lever integration."
-		exit 1
-	fi
-
-	echo "Launching BleachBit: $appimage_path"
-	setsid "$appimage_path" >/dev/null 2>&1 &
-	disown 2>/dev/null || true
-
+    case "$mode" in
+        user) launch_bleachbit_user ;;
+        root) launch_bleachbit_root ;;
+    esac
 }
 
 jsf_init_runtime_core
 
 if [ "$(jsf_detect_distro_family)" = "arch" ]; then
 
-	ensure_python_modules
-	appimageinstall
+	jsf_require_all \
+		--native bleachbit
+	main "$@"
 
 elif [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
 
 	jsf_require_all \
 		--native bleachbit
-	setsid bleachbit >/dev/null 2>&1 &
-	disown 2>/dev/null || true
-	echo "BleachBit has been successfully installed."
-	entertocontinue
+	main "$@"
 
 else
 
 	jsf_require_all \
 		--native bleachbit
-	setsid bleachbit >/dev/null 2>&1 &
-	disown 2>/dev/null || true
+	main "$@"
 
 fi
 
