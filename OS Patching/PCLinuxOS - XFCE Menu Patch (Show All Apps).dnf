@@ -25,6 +25,37 @@ jsf_detect_desktop_environment() {
 	printf '%s\n' "$de"
 }
 
+jsf_patch_gearlever_desktop_categories() {
+	run_only_if_patching="0"
+	local desktop="$HOME/.local/share/applications/it.mijorus.gearlever.desktop"
+	local mandriva_cat="X-MandrivaLinux-System-Configuration-Packaging"
+
+	if [ ! -f "$desktop" ]; then
+		echo "Gear Lever desktop file not found at $desktop"
+		return 0
+	fi
+
+	if grep -q "$mandriva_cat" "$desktop"; then
+		echo "Mandriva category already present in Gear Lever desktop file"
+	else
+		echo "Patching Gear Lever desktop file"
+		run_only_if_patching="1"
+
+		if grep -q '^Categories=' "$desktop"; then
+			sed -i.bak \
+				-e "/^Categories=/{
+                    s/;[[:space:]]*$//;
+                    s/$/;${mandriva_cat};/
+                }" \
+				"$desktop"
+		else
+			sed -i.bak \
+				-e "/^\[Desktop Entry\]/a Categories=${mandriva_cat};" \
+				"$desktop"
+		fi
+	fi
+}
+
 jsf_patch_xfce_menu_show_all_other() {
     local config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
     local menu_dir="${config_home}/menus"
@@ -70,12 +101,20 @@ jsf_refresh_xfce_menu_cache() {
 }
 
 if [ "$(jsf_detect_distro_family)" = "mandriva" ]; then
-    case "$(jsf_detect_desktop_environment)" in
-        xfce)
-            jsf_patch_xfce_menu_show_all_other
+	case "$(jsf_detect_desktop_environment)" in
+	xfce)
+		jsf_patch_gearlever_desktop_categories
+		if [ "$run_only_if_patching" == "1" ]; then
+			jsf_refresh_xfce_menu_cache
+		fi
+
+		jsf_patch_xfce_menu_show_all_other
 			if [ "$run_only_if_patching" == "1" ]; then
             jsf_refresh_xfce_menu_cache
 			fi
-            ;;
-    esac
+		;;
+	kde)
+		# add KDE-specific refresh logic later if needed
+		;;
+	esac
 fi
