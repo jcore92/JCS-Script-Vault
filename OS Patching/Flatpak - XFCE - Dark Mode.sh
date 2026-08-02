@@ -18,6 +18,8 @@ xfce_flatpak_dark_mode () {
 
 	flatpak override --user --env=GTK_THEME=Adwaita-dark --env=GTK_THEME_VARIANT=dark --env=ADW_DEBUG_COLOR_SCHEME=prefer-dark
 
+	echo "Applied Flatpak overrides for XFCE. Enjoy."
+
 }
 
 jsf_detect_desktop_environment() {
@@ -38,6 +40,9 @@ jsf_detect_desktop_environment() {
 		;;
 	kde)
 		# add KDE-specific refresh logic later if needed
+		;;
+	*)
+		echo "Unsupported desktop environment. No changes have been made."
 		;;
 	esac
 #fi
