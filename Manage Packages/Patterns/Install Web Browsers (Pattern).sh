@@ -53,7 +53,7 @@ install_vivaldi() {
     case "$family" in
         mandriva)
             jsf_require_all \
-                --native vivaldi
+                --native vivaldi-browser
             ;;
 
         suse)
