@@ -40,6 +40,9 @@ install_vivaldi_download() {
             sudo zypper --no-gpg-checks --non-interactive install "$selected_file"
             ;;
     esac
+
+	echo "Operation complete"
+	
 }
 
 
@@ -73,6 +76,9 @@ install_vivaldi() {
             echo "No Vivaldi installation path is configured for: $family"
             ;;
     esac
+
+	echo "Operation complete"
+
 }
 
 
@@ -93,15 +99,16 @@ install_brave() {
 
         arch)
             jsf_require_all \
-                --native yay
-
-            yay -S brave-bin
+                --flatpak com.brave.Browser
             ;;
 
         *)
             echo "No Brave installation path is configured for: $family"
             ;;
     esac
+
+	echo "Operation complete"
+
 }
 
 
@@ -144,9 +151,7 @@ install_librewolf() {
 
         arch)
             jsf_require_all \
-                --native yay
-
-            yay -S librewolf
+                --flatpak io.gitlab.librewolf-community
             ;;
 
         debian)
@@ -164,6 +169,9 @@ install_librewolf() {
             echo "No LibreWolf installation path is configured for: $family"
             ;;
     esac
+
+	echo "Operation complete"
+
 }
 
 
