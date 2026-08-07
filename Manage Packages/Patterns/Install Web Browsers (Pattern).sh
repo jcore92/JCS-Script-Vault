@@ -42,7 +42,7 @@ install_vivaldi_download() {
     esac
 
 	echo "Operation complete"
-	
+
 }
 
 
@@ -151,7 +151,7 @@ install_librewolf() {
 
         arch)
             jsf_require_all \
-                --flatpak io.gitlab.librewolf-community
+                --native librewolf
             ;;
 
         debian)
