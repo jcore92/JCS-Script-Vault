@@ -12,5 +12,5 @@ source "$runtime_core_path" || {
 jsf_init_runtime_core
 
 jsf_require_all \
-  --native bibletime goldendict libreoffice variety digikam qmmp vlc picard thunderbird \
-  --flatpak org.jeffvli.feishin com.bitwarden.desktop com.ulduzsoft.Birdtray com.discordapp.Discord org.telegram.desktop \
+  --native libreoffice thunderbird \
+  --flatpak com.ylsoftware.qmmp.Qmmp org.videolan.VLC org.musicbrainz.Picard org.kde.digikam io.github.xiaoyifang.goldendict_ng info.bibletime.BibleTime org.jeffvli.feishin com.bitwarden.desktop com.ulduzsoft.Birdtray com.discordapp.Discord org.telegram.desktop \
