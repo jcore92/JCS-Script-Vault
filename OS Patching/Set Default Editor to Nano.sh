@@ -30,3 +30,4 @@ export EDITOR=nano
 export VISUAL=nano
 
 echo "Nano set as default editor in: $profile_file"
+echo "Please log out and then back in again (or reboot) for changes to take affect"

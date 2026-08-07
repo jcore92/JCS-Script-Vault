@@ -11,8 +11,8 @@ source "$runtime_core_path" || {
 
 jsf_init_runtime_core
 
-#jsf_require_all \
-#	--flatpak it.mijorus.gearlever
+jsf_require_all \
+	--native nano
 
 crontab_cursor_menu() {
     local choice
@@ -24,10 +24,10 @@ crontab_cursor_menu() {
 
     case "$choice" in
         "User crontab (crontab -e)")
-            crontab -e
+            env VISUAL=nano EDITOR=nano crontab -e
             ;;
         "Root crontab (sudo crontab -e)")
-            sudo crontab -e
+            sudo env VISUAL=nano EDITOR=nano crontab -e
             ;;
         "Cancel"|"")
             return 0
