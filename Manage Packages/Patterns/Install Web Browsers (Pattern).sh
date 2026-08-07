@@ -20,11 +20,10 @@ install_vivaldi_download() {
 
     echo "Download the latest .${package_type} version of Vivaldi."
     entertocontinue
+	echo "Select the .${package_type} of Vivaldi that you just downloaded."
 
     selected_file="$(zenity --file-selection \
         --title="Choose the Vivaldi .${package_type} you downloaded." 2>/dev/null)" || return 0
-
-		echo "Select the .${package_type} of Vivaldi that you just downloaded."
 
     [ -n "$selected_file" ] || return 0
 
