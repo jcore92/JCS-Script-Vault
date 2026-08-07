@@ -1,5 +1,5 @@
 #!/bin/bash
-# jsf_no_pause="1"
+jsf_no_pause="1"
 
 app_name="JS-Forge"
 runtime_core_path="${JSF_RUNTIME_CORE_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/$app_name/runtime-core.lib}"
@@ -22,7 +22,9 @@ install_vivaldi_download() {
     entertocontinue
 
     selected_file="$(zenity --file-selection \
-        --title="Choose the Vivaldi .${package_type} you downloaded.")" || return 0
+        --title="Choose the Vivaldi .${package_type} you downloaded." 2>/dev/null)" || return 0
+
+		echo "Select the .${package_type} of Vivaldi that you just downloaded."
 
     [ -n "$selected_file" ] || return 0
 
