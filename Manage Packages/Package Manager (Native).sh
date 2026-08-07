@@ -38,9 +38,9 @@ mandriva)
 
 suse)
 	jsf_require_all \
-		--native yast2-packager
+		--native yast2
 
-	pkexec /usr/lib/YaST2/bin/sw_single_wrapper #>/dev/null 2>&1 &
+	/usr/lib/YaST2/bin/sw_single_wrapper %F
 	disown 2>/dev/null || true
 	;;
 
