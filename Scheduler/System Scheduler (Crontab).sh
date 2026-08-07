@@ -12,14 +12,7 @@ source "$runtime_core_path" || {
 jsf_init_runtime_core
 
 jsf_require_all \
-	--native nano
-
-if [ "$(jsf_detect_distro_family)" = "suse" ]; then
-
-jsf_require_all \
-	--native cronie
-
-fi
+	--native nano crontab
 
 crontab_cursor_menu() {
     local choice
