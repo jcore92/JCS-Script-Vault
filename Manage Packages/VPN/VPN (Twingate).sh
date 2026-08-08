@@ -206,7 +206,15 @@ remove_local_only() {
     [ "$selection" = "Remove local Twingate files" ] && local_cleanup
 }
 
-open_admin() { if device_files_exist && read_state; then :; else prompt_tenant || return 1; fi; xdg-open "https://${twingate_tenant}.twingate.com/" >/dev/null 2>&1 &; }
+open_admin() {
+    if device_files_exist && read_state; then
+        :
+    else
+        prompt_tenant || return 1
+    fi
+
+    xdg-open "https://${twingate_tenant}.twingate.com/" >/dev/null 2>&1 &
+}
 
 menu() {
     local selection options=("Set up this computer" "Start connection" "Stop connection" "Check connection status" "View connection logs" "Replace device key" "Remove this computer" "Remove local Twingate files only" "Open Twingate Admin" "Exit")
