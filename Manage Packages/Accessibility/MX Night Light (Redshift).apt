@@ -11,10 +11,22 @@ source "$runtime_core_path" || {
 
 jsf_init_runtime_core
 
-jsf_require_all \
-  --native rsibreak \
 
-setsid rsibreak >/dev/null 2>&1 &
-disown 2>/dev/null || true
+mx_night_light_url="https://github.com/DevuboxLinux/mx-night-light/releases/download/0.5.1/mx-night-light_0.5.0+mx25_all.deb"
+mx_night_light_deb="$(mktemp --suffix=.deb)"
 
-#exit 0
+trap 'rm -f "$mx_night_light_deb"' EXIT
+
+echo "Downloading MX Night Light..."
+
+curl -fL --retry 3 \
+    --output "$mx_night_light_deb" \
+    "$mx_night_light_url" || {
+        echo "Failed to download MX Night Light." >&2
+        exit 1
+    }
+
+echo "Installing MX Night Light..."
+printf " 🔐 "
+
+sudo apt install -y "$mx_night_light_deb"
