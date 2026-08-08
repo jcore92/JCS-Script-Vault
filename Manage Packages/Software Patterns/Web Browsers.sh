@@ -89,7 +89,7 @@ install_brave() {
     case "$family" in
         mandriva)
             jsf_require_all \
-                --native brave-browser
+                --native brave-browser-stable
             ;;
 
         suse|rhel|debian)
