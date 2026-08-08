@@ -154,6 +154,64 @@ show_status() {
     runtime_cmd ps -a --filter "name=^/${twingate_container_name}$" --format 'Container: {{.Names}} | State: {{.State}} | Status: {{.Status}}' 2>/dev/null || true
 }
 
+live_status() {
+    local key
+    local container_state
+    local started_at
+    local recent_logs
+
+    require_runtime || return 1
+
+    while true; do
+        clear
+        echo "$script_title — Live Status"
+        divider
+
+        if device_files_exist && read_state; then
+            echo "Tenant: $twingate_tenant"
+            echo "Device identity: $twingate_device_name"
+            echo "Service Key: present"
+        else
+            echo "Local device state: not configured"
+        fi
+
+        echo "Runtime: $twingate_runtime"
+
+        container_state="$(runtime_cmd inspect \
+            --format '{{.State.Status}}' \
+            "$twingate_container_name" 2>/dev/null || echo "not created")"
+
+        started_at="$(runtime_cmd inspect \
+            --format '{{.State.StartedAt}}' \
+            "$twingate_container_name" 2>/dev/null || echo "—")"
+
+        echo "Container: $twingate_container_name"
+        echo "State: $container_state"
+        echo "Started: $started_at"
+
+        divider
+        echo "Recent Client activity:"
+        recent_logs="$(runtime_cmd logs --tail 5 "$twingate_container_name" 2>&1)"
+
+        if [ -n "$recent_logs" ]; then
+            printf '%s\n' "$recent_logs"
+        else
+            echo "No Client logs are available yet."
+        fi
+
+        divider
+        echo "Refreshes every 2 seconds. Press Q to return."
+
+        IFS= read -r -s -n 1 -t 2 key || true
+
+        case "$key" in
+            q|Q)
+                return 0
+                ;;
+        esac
+    done
+}
+
 revoke_key() { mutation serviceAccountKeyRevoke 'mutation serviceAccountKeyRevoke($id:ID!){serviceAccountKeyRevoke(id:$id){ok error}}' "$(jq -n --arg id "$1" '{id:$id}')"; }
 delete_key() { mutation serviceAccountKeyDelete 'mutation serviceAccountKeyDelete($id:ID!){serviceAccountKeyDelete(id:$id){ok error}}' "$(jq -n --arg id "$1" '{id:$id}')"; }
 delete_account() { mutation serviceAccountDelete 'mutation serviceAccountDelete($id:ID!){serviceAccountDelete(id:$id){ok error}}' "$(jq -n --arg id "$1" '{id:$id}')"; }
@@ -217,12 +275,12 @@ open_admin() {
 }
 
 menu() {
-    local selection options=("Set up this computer" "Start connection" "Stop connection" "Check connection status" "View connection logs" "Replace device key" "Remove this computer" "Remove local Twingate files only" "Open Twingate Admin" "Exit")
+    local selection options=("Set up this computer" "Start connection" "Stop connection" "Check connection status" "Live connection status" "View connection logs" "Replace device key" "Remove this computer" "Remove local Twingate files only" "Open Twingate Admin" "Exit")
     while true; do
         clear; echo "$script_title"; divider
         choose "Select an option:" selection "${options[@]}"
         case "$selection" in
-            "Set up this computer") setup_device;; "Start connection") start_client;; "Stop connection") stop_client;; "Check connection status") show_status;; "View connection logs") show_logs;; "Replace device key") replace_key;; "Remove this computer") remove_device;; "Remove local Twingate files only") remove_local_only;; "Open Twingate Admin") open_admin;; "Exit") return;;
+            "Set up this computer") setup_device;; "Start connection") start_client;; "Stop connection") stop_client;; "Check connection status") show_status;; "Live connection status") live_status;; "View connection logs") show_logs;; "Replace device key") replace_key;; "Remove this computer") remove_device;; "Remove local Twingate files only") remove_local_only;; "Open Twingate Admin") open_admin;; "Exit") return;;
         esac
         [ "$selection" = "Exit" ] || pause_screen
     done
