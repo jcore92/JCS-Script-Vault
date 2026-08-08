@@ -144,7 +144,7 @@ write_twingate_files() {
 start_client() {
     require_twingate_runtime && require_twingate_device || return 1
     runtime_cmd rm -f "$twingate_container_name" >/dev/null 2>&1 || true
-    runtime_cmd run -d --name "$twingate_container_name" --network host --device /dev/net/tun --cap-add NET_ADMIN -v "$twingate_key_path:/etc/twingate/service_key.json:ro" twingate/client:latest || { echo "The Twingate Client container could not be started."; return 1; }
+    runtime_cmd run -d --name "$twingate_container_name" --network host --device /dev/net/tun --cap-add NET_ADMIN -v "$twingate_key_path:/etc/twingate/service_key.json:ro" docker.io/twingate/client:latest || { echo "The Twingate Client container could not be started."; return 1; }
     echo "Twingate Client started with $twingate_runtime."
 }
 
