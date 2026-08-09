@@ -20,6 +20,8 @@ twingate_container_name="jsf-twingate-client"
 twingate_image="docker.io/twingate/client:latest"
 twingate_runtime=""
 twingate_last_error=""
+twingate_launcher_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+twingate_launcher_path="$twingate_launcher_dir/js-forge-twingate-client.desktop"
 
 pause_screen() {
 	echo ""
@@ -386,15 +388,107 @@ open_admin() {
 	xdg-open "https://${twingate_tenant}.twingate.com/" >/dev/null 2>&1 &
 }
 
+desktop_escape() {
+    printf '%s' "$1" |
+        sed \
+            -e 's/\\/\\\\/g' \
+            -e 's/"/\\"/g' \
+            -e 's/`/\\`/g' \
+            -e 's/\$/\\$/g'
+}
+
+
+current_script_path() {
+    local source_path="${BASH_SOURCE[0]}"
+    local source_dir
+
+    if command -v readlink >/dev/null 2>&1; then
+        readlink -f "$source_path" 2>/dev/null && return 0
+    fi
+
+    source_dir="$(cd -- "$(dirname -- "$source_path")" && pwd -P)" || return 1
+    printf '%s/%s\n' "$source_dir" "$(basename -- "$source_path")"
+}
+
+
+install_menu_launcher() {
+    local script_path escaped_script_path
+
+    script_path="$(current_script_path)" || {
+        echo "Could not determine the current Twingate script path."
+        return 1
+    }
+
+    [ -f "$script_path" ] || {
+        echo "The current Twingate script was not found: $script_path"
+        return 1
+    }
+
+    escaped_script_path="$(desktop_escape "$script_path")"
+
+    mkdir -p "$twingate_launcher_dir" || {
+        echo "Could not create the application-launcher directory."
+        return 1
+    }
+
+    cat > "$twingate_launcher_path" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=$script_title
+Comment=Manage the JS-Forge Twingate Client
+Exec=bash "$escaped_script_path"
+Icon=network-vpn
+Terminal=true
+Categories=Network;Utility;
+Keywords=Twingate;VPN;Remote;JS-Forge;
+StartupNotify=true
+EOF
+
+    chmod 644 "$twingate_launcher_path"
+
+    if command -v update-desktop-database >/dev/null 2>&1; then
+        update-desktop-database "$twingate_launcher_dir" >/dev/null 2>&1 || true
+    fi
+
+    echo "Application-menu launcher installed or updated."
+    echo "Launcher file: $twingate_launcher_path"
+    echo "It should appear as: $script_title"
+}
+
+
+remove_menu_launcher() {
+    if [ -f "$twingate_launcher_path" ]; then
+        rm -f "$twingate_launcher_path"
+        echo "Application-menu launcher removed."
+    else
+        echo "No JS-Forge Twingate launcher was installed."
+    fi
+}
+
 menu() {
-	local selection options=("Set up this computer" "Start connection" "Stop connection" "Check connection status" "Live connection status" "View connection logs" "Replace device key" "Remove this computer" "Remove local Twingate files only" "Open Twingate Admin" "Exit")
+	local selection options=(
+    "Set up this computer"
+    "Start connection"
+    "Stop connection"
+    "Check connection status"
+    "Live connection status"
+    "View connection logs"
+    "Install or update application-menu launcher"
+    "Remove application-menu launcher"
+    "Replace device key"
+    "Remove this computer"
+    "Remove local Twingate files only"
+    "Open Twingate Admin"
+    "Exit"
+)
 	while true; do
 		clear
 		echo "$script_title"
 		divider
 		choose "Select an option:" selection "${options[@]}"
 		case "$selection" in
-		"Set up this computer") setup_device ;; "Start connection") start_client ;; "Stop connection") stop_client ;; "Check connection status") show_status ;; "Live connection status") live_status ;; "View connection logs") show_logs ;; "Replace device key") replace_key ;; "Remove this computer") remove_device ;; "Remove local Twingate files only") remove_local_only ;; "Open Twingate Admin") open_admin ;; "Exit") return ;;
+		"Set up this computer") setup_device ;; "Start connection") start_client ;; "Stop connection") stop_client ;; "Check connection status") show_status ;; "Live connection status") live_status ;; "View connection logs") show_logs ;; "Install or update application-menu launcher") install_menu_launcher ;; "Remove application-menu launcher") remove_menu_launcher ;; "Replace device key") replace_key ;; "Remove this computer") remove_device ;; "Remove local Twingate files only") remove_local_only ;; "Open Twingate Admin") open_admin ;; "Exit") return ;;
 		esac
 		[ "$selection" = "Exit" ] || pause_screen
 	done
