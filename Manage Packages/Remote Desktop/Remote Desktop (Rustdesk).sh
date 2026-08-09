@@ -132,7 +132,7 @@ enable_kdocker_autostart() {
 Type=Application
 Name=RustDesk (minimized)
 Comment=Start RustDesk and dock it to the system tray with KDocker
-Exec=kdocker --blind --quiet --skip-taskbar --timeout 20 rustdesk
+Exec=kdocker -f rustdesk
 Terminal=false
 X-GNOME-Autostart-enabled=true
 EOF
