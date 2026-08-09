@@ -12,7 +12,7 @@ source "$runtime_core_path" || {
 jsf_init_runtime_core
 jsf_require_all --native curl jq
 
-script_title="Twingate Travel Access"
+script_title="Twingate JSF Client"
 twingate_dir="/etc/twingate"
 twingate_key_path="$twingate_dir/service_key.json"
 twingate_state_path="$twingate_dir/jsf-travel-access.json"
