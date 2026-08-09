@@ -1,5 +1,5 @@
 #!/bin/bash
-#jsf_no_pause="1"
+jsf_no_pause="1"
 
 
 app_name="JS-Forge"
