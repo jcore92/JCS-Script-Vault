@@ -1,0 +1,145 @@
+#!/bin/bash
+jsf_no_pause="1"
+
+app_name="JS-Forge"
+runtime_core_path="${JSF_RUNTIME_CORE_PATH:-${XDG_DATA_HOME:-$HOME/.local/share}/$app_name/runtime-core.lib}"
+
+source "$runtime_core_path" || {
+    echo "Fatal: failed to source JS-Forge runtime: $runtime_core_path" >&2
+    exit 1
+}
+
+jsf_init_runtime_core
+
+script_title="Install AUR Helper"
+yay_build_root="${XDG_CACHE_HOME:-$HOME/.cache}/JS-Forge/yay-build"
+
+pause_screen() {
+    echo ""
+    entertocontinue
+}
+
+run_as_root() {
+    if [ "$EUID" -eq 0 ]; then "$@"; else sudo "$@"; fi
+}
+
+choose() {
+    local prompt="$1" result_var="$2"
+    shift 2
+    cursor_menu "$prompt" "$result_var" "$@"
+}
+
+is_arch_family() {
+    [ "$(jsf_detect_distro_family)" = "arch" ]
+}
+
+yay_installed() {
+    command -v yay >/dev/null 2>&1
+}
+
+show_status() {
+    clear
+    echo "$script_title"
+    divider
+
+    echo "Distro family: $(jsf_detect_distro_family)"
+
+    if yay_installed; then
+        echo "yay: installed ($(yay --version 2>/dev/null | head -n 1))"
+    else
+        echo "yay: not installed"
+    fi
+
+    if command -v makepkg >/dev/null 2>&1; then
+        echo "makepkg: available"
+    else
+        echo "makepkg: not available"
+    fi
+}
+
+install_yay() {
+    local build_dir
+
+    if [ "$EUID" -eq 0 ]; then
+        echo "Do not run this script as root."
+        echo "yay must be built with makepkg as your normal user."
+        return 1
+    fi
+
+    if ! is_arch_family; then
+        echo "This installer is for Arch-family distributions, including Artix."
+        echo "Detected family: $(jsf_detect_distro_family)"
+        return 1
+    fi
+
+    if yay_installed; then
+        echo "yay is already installed: $(yay --version 2>/dev/null | head -n 1)"
+        return 0
+    fi
+
+    if ! command -v pacman >/dev/null 2>&1; then
+        echo "pacman was not found. This system cannot build yay with this installer."
+        return 1
+    fi
+
+    echo "Installing the native build requirements: base-devel and git..."
+    run_as_root pacman -S --needed --noconfirm base-devel git || {
+        echo "Could not install the native build requirements."
+        return 1
+    }
+
+    mkdir -p "$yay_build_root" || return 1
+    build_dir="$(mktemp -d "$yay_build_root/yay.XXXXXX")" || return 1
+    trap 'rm -rf "$build_dir"' RETURN
+
+    echo "Cloning the official yay PKGBUILD from the AUR..."
+    git clone https://aur.archlinux.org/yay.git "$build_dir/yay" || {
+        echo "Could not clone the yay AUR repository."
+        return 1
+    }
+
+    echo "Building and installing yay as user $USER..."
+    (
+        cd "$build_dir/yay" || exit 1
+        makepkg -si --noconfirm
+    ) || {
+        echo "yay could not be built or installed."
+        return 1
+    }
+
+    rm -rf "$build_dir"
+    trap - RETURN
+
+    if yay_installed; then
+        echo "yay installed successfully: $(yay --version 2>/dev/null | head -n 1)"
+    else
+        echo "The build finished, but the yay command was not found."
+        return 1
+    fi
+}
+
+menu() {
+    local selection
+    local options=(
+        "Install yay AUR helper"
+        "Check AUR helper status"
+        "Exit"
+    )
+
+    while true; do
+        clear
+        echo "$script_title"
+        divider
+        choose "Select an option:" selection "${options[@]}"
+
+        case "$selection" in
+            "Install yay AUR helper") install_yay ;;
+            "Check AUR helper status") show_status ;;
+            "Exit") return 0 ;;
+        esac
+
+        [ "$selection" = "Exit" ] || pause_screen
+    done
+}
+
+menu
