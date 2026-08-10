@@ -14,6 +14,8 @@ jsf_init_runtime_core
 jsf_require_all \
   --flatpak com.rcloneui.RcloneUI \
 
+flatpak override --user --filesystem=host --talk-name=org.freedesktop.Flatpak com.rcloneui.RcloneUI
+
 setsid flatpak run com.rcloneui.RcloneUI >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
