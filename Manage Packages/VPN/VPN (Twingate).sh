@@ -184,18 +184,27 @@ write_files() {
 }
 
 ensure_tun_device() {
+    echo "Ensuring the tun kernel module is loaded..."
+
     if command -v modprobe >/dev/null 2>&1; then
-        echo "Ensuring the tun kernel module is loaded..."
-        run_as_root modprobe tun >/dev/null 2>&1 || true
+        if ! run_as_root modprobe tun; then
+            if [ ! -c /dev/net/tun ]; then
+                echo "Could not load the tun kernel module."
+                return 1
+            fi
+
+            echo "The tun module could not be loaded, but /dev/net/tun exists."
+        fi
     fi
 
-    if [ -c /dev/net/tun ]; then
-        return 0
+    if [ ! -c /dev/net/tun ]; then
+        echo "Twingate requires /dev/net/tun, but it is unavailable."
+        echo "Try: sudo modprobe tun"
+        return 1
     fi
 
-    echo "Twingate requires /dev/net/tun, but it is unavailable."
-    echo "Try: sudo modprobe tun"
-    return 1
+    echo "TUN device is ready."
+    return 0
 }
 
 start_client() {
