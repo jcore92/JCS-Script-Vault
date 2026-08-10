@@ -13,6 +13,18 @@ jsf_init_runtime_core
 
 PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+if [ "$(jsf_detect_distro_family)" = "suse" ]; then
+
+jsf_require_all \
+  --native ufw yast2 \
+
+setsid xdg-su -c '/sbin/yast2 firewall' >/dev/null 2>&1 &
+disown 2>/dev/null || true
+
+#exit 0
+
+else
+
 jsf_require_all \
   --native ufw gufw \
 
@@ -20,3 +32,4 @@ setsid gufw >/dev/null 2>&1 &
 disown 2>/dev/null || true
 
 #exit 0
+fi
