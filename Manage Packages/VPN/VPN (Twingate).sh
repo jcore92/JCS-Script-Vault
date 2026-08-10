@@ -183,10 +183,36 @@ write_files() {
 	return "$result"
 }
 
+ensure_tun_device() {
+    if [ -c /dev/net/tun ]; then
+        return 0
+    fi
+
+    echo "The TUN device is unavailable. Attempting to load the tun kernel module..."
+
+    if ! command -v modprobe >/dev/null 2>&1; then
+        echo "modprobe is unavailable, and /dev/net/tun does not exist."
+        return 1
+    fi
+
+    run_as_root modprobe tun || {
+        echo "Could not load the tun kernel module."
+        return 1
+    }
+
+    if [ -c /dev/net/tun ]; then
+        echo "TUN device is ready."
+        return 0
+    fi
+
+    echo "The tun module was requested, but /dev/net/tun is still unavailable."
+    return 1
+}
+
 start_client() {
 	local container_args=()
 
-	require_runtime && require_device || return 1
+	require_runtime && require_device && ensure_tun_device || return 1
 	runtime_cmd rm -f "$twingate_container_name" >/dev/null 2>&1 || true
 
 	container_args=(
