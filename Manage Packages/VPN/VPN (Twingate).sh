@@ -209,7 +209,7 @@ ensure_tun_device() {
 }
 
 enable_persistent_tun_support() {
-	if [ "$(jsf_detect_distro_family)" != "opensuse" ]; then
+	if [ "$(jsf_detect_distro_family)" != "suse" ]; then
 		echo "Persistent TUN boot configuration is currently provided only for openSUSE."
 		return 1
 	fi
@@ -237,7 +237,7 @@ enable_persistent_tun_support() {
 }
 
 disable_persistent_tun_support() {
-	if [ "$(jsf_detect_distro_family)" != "opensuse" ]; then
+	if [ "$(jsf_detect_distro_family)" != "suse" ]; then
 		echo "Persistent TUN boot configuration is currently provided only for openSUSE."
 		return 1
 	fi
@@ -252,7 +252,7 @@ disable_persistent_tun_support() {
 }
 
 show_persistent_tun_status() {
-	if [ "$(jsf_detect_distro_family)" != "opensuse" ]; then
+	if [ "$(jsf_detect_distro_family)" != "suse" ]; then
 		echo "Persistent TUN boot configuration: not applicable on this distro."
 		return 0
 	fi
