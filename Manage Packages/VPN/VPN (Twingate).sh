@@ -26,6 +26,7 @@ twingate_tray_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/JS-Forge"
 twingate_tray_config_path="$twingate_tray_config_dir/twingate-yad-tray.conf"
 twingate_tray_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/JS-Forge"
 twingate_tray_pid_path="$twingate_tray_state_dir/twingate-yad-tray.pid"
+twingate_tun_modules_file="/etc/modules-load.d/jsf-twingate.conf"
 
 pause_screen() {
 	echo ""
@@ -184,27 +185,90 @@ write_files() {
 }
 
 ensure_tun_device() {
-    echo "Ensuring the tun kernel module is loaded..."
+	echo "Ensuring the tun kernel module is loaded..."
 
-    if command -v modprobe >/dev/null 2>&1; then
-        if ! run_as_root modprobe tun; then
-            if [ ! -c /dev/net/tun ]; then
-                echo "Could not load the tun kernel module."
-                return 1
-            fi
+	if command -v modprobe >/dev/null 2>&1; then
+		if ! run_as_root modprobe tun; then
+			if [ ! -c /dev/net/tun ]; then
+				echo "Could not load the tun kernel module."
+				return 1
+			fi
 
-            echo "The tun module could not be loaded, but /dev/net/tun exists."
-        fi
-    fi
+			echo "The tun module could not be loaded, but /dev/net/tun exists."
+		fi
+	fi
 
-    if [ ! -c /dev/net/tun ]; then
-        echo "Twingate requires /dev/net/tun, but it is unavailable."
-        echo "Try: sudo modprobe tun"
-        return 1
-    fi
+	if [ ! -c /dev/net/tun ]; then
+		echo "Twingate requires /dev/net/tun, but it is unavailable."
+		echo "Try: sudo modprobe tun"
+		return 1
+	fi
 
-    echo "TUN device is ready."
-    return 0
+	echo "TUN device is ready."
+	return 0
+}
+
+enable_persistent_tun_support() {
+	if [ "$(jsf_detect_distro_family)" != "opensuse" ]; then
+		echo "Persistent TUN boot configuration is currently provided only for openSUSE."
+		return 1
+	fi
+
+	echo "Configuring the tun kernel module to load automatically at boot..."
+
+	if ! printf 'tun\n' | run_as_root tee "$twingate_tun_modules_file" >/dev/null; then
+		echo "Could not create: $twingate_tun_modules_file"
+		return 1
+	fi
+
+	if ! run_as_root modprobe tun; then
+		echo "The boot configuration was created, but tun could not be loaded now."
+		return 1
+	fi
+
+	if grep -qw tun /proc/misc; then
+		echo "Persistent TUN support is enabled."
+		echo "The tun module will load automatically after future reboots."
+		return 0
+	fi
+
+	echo "The configuration file was created, but the TUN driver is not currently available."
+	return 1
+}
+
+disable_persistent_tun_support() {
+	if [ "$(jsf_detect_distro_family)" != "opensuse" ]; then
+		echo "Persistent TUN boot configuration is currently provided only for openSUSE."
+		return 1
+	fi
+
+	if run_as_root rm -f "$twingate_tun_modules_file"; then
+		echo "Persistent TUN boot configuration was removed."
+		echo "The currently loaded tun module was left alone."
+	else
+		echo "Could not remove: $twingate_tun_modules_file"
+		return 1
+	fi
+}
+
+show_persistent_tun_status() {
+	if [ "$(jsf_detect_distro_family)" != "opensuse" ]; then
+		echo "Persistent TUN boot configuration: not applicable on this distro."
+		return 0
+	fi
+
+	if run_as_root test -f "$twingate_tun_modules_file"; then
+		echo "Persistent TUN boot configuration: enabled"
+		echo "File: $twingate_tun_modules_file"
+	else
+		echo "Persistent TUN boot configuration: disabled"
+	fi
+
+	if grep -qw tun /proc/misc; then
+		echo "TUN driver: currently loaded"
+	else
+		echo "TUN driver: not currently loaded"
+	fi
 }
 
 start_client() {
@@ -620,6 +684,9 @@ menu() {
 		"Check connection status"
 		"Live connection status"
 		"View connection logs"
+		"Enable persistent TUN support at boot"
+		"Disable persistent TUN support at boot"
+		"Check persistent TUN support"
 		"Enable tray indicator"
 		"Disable tray indicator"
 		"Check tray indicator status"
@@ -637,7 +704,7 @@ menu() {
 		divider
 		choose "Select an option:" selection "${options[@]}"
 		case "$selection" in
-		"Set up this computer") setup_device ;; "Start connection") start_client ;; "Stop connection") stop_client ;; "Check connection status") show_status ;; "Live connection status") live_status ;; "View connection logs") show_logs ;; "Enable tray indicator") enable_tray_indicator ;; "Disable tray indicator") disable_tray_indicator ;; "Check tray indicator status") show_tray_indicator_status ;; "Install or update application-menu launcher") install_menu_launcher ;; "Remove application-menu launcher") remove_menu_launcher ;; "Replace device key") replace_key ;; "Remove this computer") remove_device ;; "Remove local Twingate files only") remove_local_only ;; "Open Twingate Admin") open_admin ;; "Exit") return ;;
+		"Set up this computer") setup_device ;; "Start connection") start_client ;; "Stop connection") stop_client ;; "Check connection status") show_status ;; "Live connection status") live_status ;; "View connection logs") show_logs ;; "Enable persistent TUN support at boot") enable_persistent_tun_support ;; "Disable persistent TUN support at boot") disable_persistent_tun_support ;; "Check persistent TUN support") show_persistent_tun_status ;; "Enable tray indicator") enable_tray_indicator ;; "Disable tray indicator") disable_tray_indicator ;; "Check tray indicator status") show_tray_indicator_status ;; "Install or update application-menu launcher") install_menu_launcher ;; "Remove application-menu launcher") remove_menu_launcher ;; "Replace device key") replace_key ;; "Remove this computer") remove_device ;; "Remove local Twingate files only") remove_local_only ;; "Open Twingate Admin") open_admin ;; "Exit") return ;;
 		esac
 		[ "$selection" = "Exit" ] || pause_screen
 	done
