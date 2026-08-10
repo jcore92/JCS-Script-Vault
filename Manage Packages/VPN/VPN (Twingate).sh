@@ -22,6 +22,10 @@ twingate_runtime=""
 twingate_last_error=""
 twingate_launcher_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 twingate_launcher_path="$twingate_launcher_dir/js-forge-twingate-client.desktop"
+twingate_tray_config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/JS-Forge"
+twingate_tray_config_path="$twingate_tray_config_dir/twingate-yad-tray.conf"
+twingate_tray_state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/JS-Forge"
+twingate_tray_pid_path="$twingate_tray_state_dir/twingate-yad-tray.pid"
 
 pause_screen() {
 	echo ""
@@ -183,7 +187,6 @@ start_client() {
 	local container_args=()
 
 	require_runtime && require_device || return 1
-
 	runtime_cmd rm -f "$twingate_container_name" >/dev/null 2>&1 || true
 
 	container_args=(
@@ -200,7 +203,6 @@ start_client() {
 			--security-opt label=disable
 			-v "$twingate_key_path:/etc/twingate/service_key.json:ro,Z"
 		)
-
 		echo "Using the container compatibility profile."
 		;;
 	*)
@@ -217,10 +219,21 @@ start_client() {
 		return 1
 	}
 
+	start_tray_indicator
 	echo "Twingate Client started with $twingate_runtime."
 }
 
-stop_client() { require_runtime && { runtime_cmd stop "$twingate_container_name" >/dev/null 2>&1 && echo "Twingate Client stopped." || echo "No running Twingate Client container was found."; }; }
+stop_client() {
+	require_runtime || return 1
+
+	if runtime_cmd stop "$twingate_container_name" >/dev/null 2>&1; then
+		echo "Twingate Client stopped."
+	else
+		echo "No running Twingate Client container was found."
+	fi
+
+	stop_tray_indicator
+}
 show_logs() { require_runtime && runtime_cmd logs --tail 80 "$twingate_container_name"; }
 
 show_status() {
@@ -311,6 +324,7 @@ remote_step() {
 }
 
 local_cleanup() {
+	stop_tray_indicator
 	require_runtime || return 1
 	runtime_cmd rm -f "$twingate_container_name" >/dev/null 2>&1 || true
 	run_as_root rm -f "$twingate_key_path" "$twingate_state_path"
@@ -389,49 +403,47 @@ open_admin() {
 }
 
 desktop_escape() {
-    printf '%s' "$1" |
-        sed \
-            -e 's/\\/\\\\/g' \
-            -e 's/"/\\"/g' \
-            -e 's/`/\\`/g' \
-            -e 's/\$/\\$/g'
+	printf '%s' "$1" |
+		sed \
+			-e 's/\\/\\\\/g' \
+			-e 's/"/\\"/g' \
+			-e 's/`/\\`/g' \
+			-e 's/\$/\\$/g'
 }
-
 
 current_script_path() {
-    local source_path="${BASH_SOURCE[0]}"
-    local source_dir
+	local source_path="${BASH_SOURCE[0]}"
+	local source_dir
 
-    if command -v readlink >/dev/null 2>&1; then
-        readlink -f "$source_path" 2>/dev/null && return 0
-    fi
+	if command -v readlink >/dev/null 2>&1; then
+		readlink -f "$source_path" 2>/dev/null && return 0
+	fi
 
-    source_dir="$(cd -- "$(dirname -- "$source_path")" && pwd -P)" || return 1
-    printf '%s/%s\n' "$source_dir" "$(basename -- "$source_path")"
+	source_dir="$(cd -- "$(dirname -- "$source_path")" && pwd -P)" || return 1
+	printf '%s/%s\n' "$source_dir" "$(basename -- "$source_path")"
 }
 
-
 install_menu_launcher() {
-    local script_path escaped_script_path
+	local script_path escaped_script_path
 
-    script_path="$(current_script_path)" || {
-        echo "Could not determine the current Twingate script path."
-        return 1
-    }
+	script_path="$(current_script_path)" || {
+		echo "Could not determine the current Twingate script path."
+		return 1
+	}
 
-    [ -f "$script_path" ] || {
-        echo "The current Twingate script was not found: $script_path"
-        return 1
-    }
+	[ -f "$script_path" ] || {
+		echo "The current Twingate script was not found: $script_path"
+		return 1
+	}
 
-    escaped_script_path="$(desktop_escape "$script_path")"
+	escaped_script_path="$(desktop_escape "$script_path")"
 
-    mkdir -p "$twingate_launcher_dir" || {
-        echo "Could not create the application-launcher directory."
-        return 1
-    }
+	mkdir -p "$twingate_launcher_dir" || {
+		echo "Could not create the application-launcher directory."
+		return 1
+	}
 
-    cat > "$twingate_launcher_path" <<EOF
+	cat >"$twingate_launcher_path" <<EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
@@ -445,50 +457,163 @@ Keywords=Twingate;VPN;Remote;JS-Forge;
 StartupNotify=true
 EOF
 
-    chmod 644 "$twingate_launcher_path"
+	chmod 644 "$twingate_launcher_path"
 
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database "$twingate_launcher_dir" >/dev/null 2>&1 || true
-    fi
+	if command -v update-desktop-database >/dev/null 2>&1; then
+		update-desktop-database "$twingate_launcher_dir" >/dev/null 2>&1 || true
+	fi
 
-    echo "Application-menu launcher installed or updated."
-    echo "Launcher file: $twingate_launcher_path"
-    echo "It should appear as: $script_title"
+	echo "Application-menu launcher installed or updated."
+	echo "Launcher file: $twingate_launcher_path"
+	echo "It should appear as: $script_title"
 }
 
-
 remove_menu_launcher() {
-    if [ -f "$twingate_launcher_path" ]; then
-        rm -f "$twingate_launcher_path"
-        echo "Application-menu launcher removed."
-    else
-        echo "No JS-Forge Twingate launcher was installed."
-    fi
+	if tray_indicator_enabled; then
+		echo "Disable tray support before removing the application-menu launcher."
+		return 1
+	fi
+	if [ -f "$twingate_launcher_path" ]; then
+		rm -f "$twingate_launcher_path"
+		echo "Application-menu launcher removed."
+	else
+		echo "No JS-Forge Twingate launcher was installed."
+	fi
+}
+
+tray_indicator_enabled() {
+	[ -r "$twingate_tray_config_path" ] &&
+		grep -Fxq "enabled=1" "$twingate_tray_config_path"
+}
+
+stop_tray_indicator() {
+	local tray_pid
+
+	[ -r "$twingate_tray_pid_path" ] || return 0
+	tray_pid="$(cat "$twingate_tray_pid_path" 2>/dev/null)"
+
+	case "$tray_pid" in
+	"" | *[!0-9]*) ;;
+	*)
+		if ps -p "$tray_pid" -o comm= 2>/dev/null | grep -qx "yad"; then
+			kill "$tray_pid" >/dev/null 2>&1 || true
+		fi
+		;;
+	esac
+
+	rm -f "$twingate_tray_pid_path"
+}
+
+start_tray_indicator() {
+	local tray_action
+
+	tray_indicator_enabled || return 0
+	command -v yad >/dev/null 2>&1 || return 0
+
+	# A tray icon can only exist inside a graphical user session.
+	[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || return 0
+
+	stop_tray_indicator
+	mkdir -p "$twingate_tray_state_dir" || return 0
+	chmod 700 "$twingate_tray_state_dir" 2>/dev/null || true
+
+	# The menu launcher is installed when tray support is enabled.
+	# gtk-launch opens that existing launcher, including Terminal=true.
+	tray_action="gtk-launch js-forge-twingate-client"
+
+	if ! command -v gtk-launch >/dev/null 2>&1; then
+		tray_action=":"
+	fi
+
+	setsid yad \
+		--notification \
+		--image="network-vpn" \
+		--text="Twingate started by JS-Forge" \
+		--command="$tray_action" \
+		>/dev/null 2>&1 </dev/null &
+
+	printf '%s\n' "$!" >"$twingate_tray_pid_path"
+}
+
+enable_tray_indicator() {
+	if ! command -v yad >/dev/null 2>&1; then
+		echo "YAD is required for the optional tray indicator."
+		echo "Attempting to install YAD from this distribution's package manager..."
+		jsf_require_all --native yad || true
+	fi
+
+	if ! command -v yad >/dev/null 2>&1; then
+		echo "YAD could not be installed. Tray support remains disabled."
+		echo "Twingate itself is unchanged and will continue to work normally."
+		return 1
+	fi
+
+	install_menu_launcher || {
+		echo "The application-menu launcher could not be installed. Tray support remains disabled."
+		return 1
+	}
+
+	mkdir -p "$twingate_tray_config_dir" || return 1
+	chmod 700 "$twingate_tray_config_dir" 2>/dev/null || true
+	printf 'enabled=1\n' >"$twingate_tray_config_path"
+	chmod 600 "$twingate_tray_config_path" 2>/dev/null || true
+
+	echo "Tray support is enabled."
+	echo "The indicator will appear after the next successful Start connection action."
+}
+
+disable_tray_indicator() {
+	stop_tray_indicator
+	rm -f "$twingate_tray_config_path"
+	echo "Tray support is disabled."
+}
+
+show_tray_indicator_status() {
+	if tray_indicator_enabled; then
+		echo "Tray preference: enabled"
+	else
+		echo "Tray preference: disabled"
+	fi
+
+	if command -v yad >/dev/null 2>&1; then
+		echo "YAD: available"
+	else
+		echo "YAD: unavailable"
+	fi
+
+	if [ -r "$twingate_tray_pid_path" ]; then
+		echo "Tray process: recorded (PID $(cat "$twingate_tray_pid_path" 2>/dev/null))"
+	else
+		echo "Tray process: not running"
+	fi
 }
 
 menu() {
 	local selection options=(
-    "Set up this computer"
-    "Start connection"
-    "Stop connection"
-    "Check connection status"
-    "Live connection status"
-    "View connection logs"
-    "Install or update application-menu launcher"
-    "Remove application-menu launcher"
-    "Replace device key"
-    "Remove this computer"
-    "Remove local Twingate files only"
-    "Open Twingate Admin"
-    "Exit"
-)
+		"Set up this computer"
+		"Start connection"
+		"Stop connection"
+		"Check connection status"
+		"Live connection status"
+		"View connection logs"
+		"Enable tray indicator"
+		"Disable tray indicator"
+		"Check tray indicator status"
+		"Install or update application-menu launcher"
+		"Remove application-menu launcher"
+		"Replace device key"
+		"Remove this computer"
+		"Remove local Twingate files only"
+		"Open Twingate Admin"
+		"Exit"
+	)
 	while true; do
 		clear
 		echo "$script_title"
 		divider
 		choose "Select an option:" selection "${options[@]}"
 		case "$selection" in
-		"Set up this computer") setup_device ;; "Start connection") start_client ;; "Stop connection") stop_client ;; "Check connection status") show_status ;; "Live connection status") live_status ;; "View connection logs") show_logs ;; "Install or update application-menu launcher") install_menu_launcher ;; "Remove application-menu launcher") remove_menu_launcher ;; "Replace device key") replace_key ;; "Remove this computer") remove_device ;; "Remove local Twingate files only") remove_local_only ;; "Open Twingate Admin") open_admin ;; "Exit") return ;;
+		"Set up this computer") setup_device ;; "Start connection") start_client ;; "Stop connection") stop_client ;; "Check connection status") show_status ;; "Live connection status") live_status ;; "View connection logs") show_logs ;; "Enable tray indicator") enable_tray_indicator ;; "Disable tray indicator") disable_tray_indicator ;; "Check tray indicator status") show_tray_indicator_status ;; "Install or update application-menu launcher") install_menu_launcher ;; "Remove application-menu launcher") remove_menu_launcher ;; "Replace device key") replace_key ;; "Remove this computer") remove_device ;; "Remove local Twingate files only") remove_local_only ;; "Open Twingate Admin") open_admin ;; "Exit") return ;;
 		esac
 		[ "$selection" = "Exit" ] || pause_screen
 	done
