@@ -587,7 +587,7 @@ Exit "Back to main menu" \
 show_reference() {
   local text
   text=$(cat <<EOF
-SysVinit Directories Installed/Active ($SYSV_DIR):
+SysVinit Installed/Active ($SYSV_DIR):
    $SYSV_INSTALLED / $SYSV_ACTIVE
 
 SysVinit commands reference:
