@@ -284,7 +284,7 @@ start_client() {
 	)
 
 	case "$(jsf_detect_distro_family)" in
-	opensuse)
+	suse|opensuse)
 		container_args+=(
 			--device /dev/net/tun:/dev/net/tun
 			--cap-add NET_ADMIN
@@ -676,38 +676,162 @@ show_tray_indicator_status() {
 	fi
 }
 
-menu() {
-	local selection options=(
-		"Set up this computer"
-		"Start connection"
-		"Stop connection"
-		"Check connection status"
-		"Live connection status"
-		"View connection logs"
-		"Enable persistent TUN support at boot"
-		"Disable persistent TUN support at boot"
-		"Check persistent TUN support"
-		"Enable tray indicator"
-		"Disable tray indicator"
-		"Check tray indicator status"
-		"Install or update application-menu launcher"
-		"Remove application-menu launcher"
-		"Replace device key"
-		"Remove this computer"
-		"Remove local Twingate files only"
-		"Open Twingate Admin"
-		"Exit"
-	)
-	while true; do
-		clear
-		echo "$script_title"
-		divider
-		choose "Select an option:" selection "${options[@]}"
-		case "$selection" in
-		"Set up this computer") setup_device ;; "Start connection") start_client ;; "Stop connection") stop_client ;; "Check connection status") show_status ;; "Live connection status") live_status ;; "View connection logs") show_logs ;; "Enable persistent TUN support at boot") enable_persistent_tun_support ;; "Disable persistent TUN support at boot") disable_persistent_tun_support ;; "Check persistent TUN support") show_persistent_tun_status ;; "Enable tray indicator") enable_tray_indicator ;; "Disable tray indicator") disable_tray_indicator ;; "Check tray indicator status") show_tray_indicator_status ;; "Install or update application-menu launcher") install_menu_launcher ;; "Remove application-menu launcher") remove_menu_launcher ;; "Replace device key") replace_key ;; "Remove this computer") remove_device ;; "Remove local Twingate files only") remove_local_only ;; "Open Twingate Admin") open_admin ;; "Exit") return ;;
-		esac
-		[ "$selection" = "Exit" ] || pause_screen
-	done
+connection_status_menu() {
+    local selection
+    local options=(
+        "Quick status"
+        "Live status"
+        "View connection logs"
+        "Back"
+    )
+
+    while true; do
+        clear
+        echo "$script_title — Connection Status"
+        divider
+
+        choose "Select an option:" selection "${options[@]}"
+
+        case "$selection" in
+        "Quick status") show_status ;;
+        "Live status") live_status ;;
+        "View connection logs") show_logs ;;
+        "Back") return ;;
+        esac
+
+        [ "$selection" = "Back" ] || pause_screen
+    done
 }
+
+
+desktop_integration_menu() {
+    local selection
+    local options=(
+        "Enable tray indicator"
+        "Disable tray indicator"
+        "Check tray indicator status"
+        "Install or update application-menu launcher"
+        "Remove application-menu launcher"
+        "Back"
+    )
+
+    while true; do
+        clear
+        echo "$script_title — Desktop Integration"
+        divider
+
+        choose "Select an option:" selection "${options[@]}"
+
+        case "$selection" in
+        "Enable tray indicator") enable_tray_indicator ;;
+        "Disable tray indicator") disable_tray_indicator ;;
+        "Check tray indicator status") show_tray_indicator_status ;;
+        "Install or update application-menu launcher") install_menu_launcher ;;
+        "Remove application-menu launcher") remove_menu_launcher ;;
+        "Back") return ;;
+        esac
+
+        [ "$selection" = "Back" ] || pause_screen
+    done
+}
+
+
+tun_support_menu() {
+    local selection
+    local options=(
+        "Enable persistent TUN support at boot"
+        "Disable persistent TUN support at boot"
+        "Check persistent TUN support"
+        "Back"
+    )
+
+    while true; do
+        clear
+        echo "$script_title — TUN Support"
+        divider
+
+        choose "Select an option:" selection "${options[@]}"
+
+        case "$selection" in
+        "Enable persistent TUN support at boot") enable_persistent_tun_support ;;
+        "Disable persistent TUN support at boot") disable_persistent_tun_support ;;
+        "Check persistent TUN support") show_persistent_tun_status ;;
+        "Back") return ;;
+        esac
+
+        [ "$selection" = "Back" ] || pause_screen
+    done
+}
+
+
+device_management_menu() {
+    local selection
+    local options=(
+        "Set up this computer"
+        "Replace device key"
+        "Remove this computer"
+        "Remove local Twingate files only"
+        "Back"
+    )
+
+    while true; do
+        clear
+        echo "$script_title — Device Management"
+        divider
+
+        choose "Select an option:" selection "${options[@]}"
+
+        case "$selection" in
+        "Set up this computer") setup_device ;;
+        "Replace device key") replace_key ;;
+        "Remove this computer") remove_device ;;
+        "Remove local Twingate files only") remove_local_only ;;
+        "Back") return ;;
+        esac
+
+        [ "$selection" = "Back" ] || pause_screen
+    done
+}
+
+
+menu() {
+    local selection
+    local options=(
+        "Start connection"
+        "Stop connection"
+        "Connection status"
+        "Desktop integration"
+        "Device management"
+        "TUN support"
+        "Open Twingate Admin"
+        "Exit"
+    )
+
+    while true; do
+        clear
+        echo "$script_title"
+        divider
+
+        choose "Select an option:" selection "${options[@]}"
+
+        case "$selection" in
+        "Start connection") start_client ;;
+        "Stop connection") stop_client ;;
+        "Connection status") connection_status_menu ;;
+        "Desktop integration") desktop_integration_menu ;;
+        "Device management") device_management_menu ;;
+        "TUN support") tun_support_menu ;;
+        "Open Twingate Admin") open_admin ;;
+        "Exit") return ;;
+        esac
+
+        case "$selection" in
+        "Start connection" | "Stop connection" | "Open Twingate Admin")
+            pause_screen
+            ;;
+        esac
+    done
+}
+
 
 menu
